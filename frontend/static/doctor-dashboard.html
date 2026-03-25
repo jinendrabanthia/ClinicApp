@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Doctor Dashboard | TriageAID</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <script src="/stt.js"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      /* Slate-50 / Cyan-600 medical professional palette */
+      --slate-50:#f8fafc;--slate-100:#f1f5f9;--slate-200:#e2e8f0;--slate-300:#cbd5e1;
+      --slate-400:#94a3b8;--slate-500:#64748b;--slate-600:#475569;--slate-700:#334155;
+      --slate-800:#1e293b;--slate-900:#0f172a;
+      --cyan-50:#ecfeff;--cyan-100:#cffafe;--cyan-400:#22d3ee;
+      --cyan-500:#06b6d4;--cyan-600:#0891b2;--cyan-700:#0e7490;
+      --red-50:#fef2f2;--red-100:#fee2e2;--red-500:#ef4444;--red-600:#dc2626;--red-700:#b91c1c;
+      --orange-50:#fff7ed;--orange-100:#ffedd5;--orange-500:#f97316;--orange-700:#c2410c;
+      --green-50:#f0fdf4;--green-100:#dcfce7;--green-500:#22c55e;--green-600:#16a34a;--green-700:#15803d;
+      --indigo-600:#4f46e5;--white:#fff;
+      --sha-sm:0 1px 3px rgba(0,0,0,.07);
+      --sha:0 4px 12px rgba(0,0,0,.08);
+      --sha-lg:0 12px 28px rgba(0,0,0,.12);
+      --sha-xl:0 24px 48px rgba(0,0,0,.18);
+    }
+    body{font-family:'Inter',sans-serif;background:var(--slate-50);color:var(--slate-800);min-height:100vh;}
+
+    /* ── NAV ── */
+    nav{
+      background:var(--white);border-bottom:1px solid var(--slate-200);
+      padding:0 24px;position:sticky;top:0;z-index:200;
+      box-shadow:var(--sha-sm);
+    }
+    .nav-inner{max-width:1500px;margin:0 auto;display:flex;align-items:center;height:64px;gap:14px;}
+    .logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+    .logo-mark{width:36px;height:36px;background:linear-gradient(135deg,var(--cyan-600),var(--indigo-600));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;}
+    .logo-text{font-family:'Poppins',sans-serif;font-size:18px;font-weight:700;color:var(--slate-900);}
+    .logo-text span{color:var(--cyan-600);}
+    .nav-div{width:1px;height:26px;background:var(--slate-200);}
+    .nav-sect{font-size:13px;font-weight:600;color:var(--slate-500);}
+    .nav-sp{flex:1;}
+    .live-pill{display:flex;align-items:center;gap:6px;background:var(--green-100);border:1px solid rgba(34,197,94,.3);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;color:var(--green-700);}
+    .offline-pill{display:none;align-items:center;gap:6px;background:var(--orange-100);border:1px solid rgba(249,115,22,.3);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;color:var(--orange-700);}
+    .dot-g{width:7px;height:7px;border-radius:50%;background:var(--green-500);animation:pg 2s infinite;}
+    .dot-o{width:7px;height:7px;border-radius:50%;background:var(--orange-500);}
+    @keyframes pg{0%,100%{opacity:1}50%{opacity:.5}}
+    .doc-chip{display:flex;align-items:center;gap:10px;background:var(--cyan-50);border:1px solid var(--cyan-100);border-radius:12px;padding:6px 14px;}
+    .doc-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--cyan-600),var(--indigo-600));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;}
+    .doc-nm{font-size:13px;font-weight:600;color:var(--slate-900);}
+    .doc-sp{font-size:11px;color:var(--slate-500);}
+    .btn-logout{padding:7px 14px;background:var(--slate-100);border:1px solid var(--slate-200);border-radius:9px;font-size:13px;font-weight:500;color:var(--slate-600);cursor:pointer;transition:all .2s;}
+    .btn-logout:hover{background:var(--red-50);color:var(--red-600);border-color:rgba(239,68,68,.3);}
+
+    /* ── LAYOUT ── */
+    .layout{max-width:1500px;margin:0 auto;padding:24px;}
+
+    /* ── STATS ── */
+    .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:22px;}
+    .stat-card{background:var(--white);border-radius:14px;padding:18px 20px;box-shadow:var(--sha-sm);border:1px solid var(--slate-100);transition:transform .2s;}
+    .stat-card:hover{transform:translateY(-2px);}
+    .stat-icon{font-size:26px;margin-bottom:8px;}
+    .stat-num{font-family:'Poppins',sans-serif;font-size:28px;font-weight:800;line-height:1;}
+    .stat-lbl{font-size:11px;color:var(--slate-500);margin-top:4px;}
+    .s-total .stat-num{color:var(--cyan-600);}
+    .s-critical .stat-num{color:var(--red-600);}
+    .s-urgent .stat-num{color:var(--orange-500);}
+    .s-routine .stat-num{color:var(--green-600);}
+    .s-done .stat-num{color:var(--indigo-600);}
+
+    /* ── TOOLBAR ── */
+    .toolbar{display:flex;align-items:center;justify-content:space-between;background:var(--white);border-radius:12px;padding:10px 18px;box-shadow:var(--sha-sm);border:1px solid var(--slate-100);margin-bottom:20px;gap:12px;flex-wrap:wrap;}
+    .toolbar-left{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--slate-500);}
+    .sync-badge{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--cyan-700);background:var(--cyan-50);border-radius:20px;padding:4px 10px;border:1px solid var(--cyan-100);}
+    .refresh-btn{padding:7px 16px;background:var(--cyan-600);border:none;border-radius:9px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;}
+    .refresh-btn:hover{background:var(--cyan-700);}
+
+    /* ── QUEUE GRID ── */
+    .queues{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:24px;}
+    @media(max-width:1200px){.queues{grid-template-columns:1fr 1fr;}}
+    @media(max-width:700px){.queues{grid-template-columns:1fr;}}
+
+    .q-panel{border-radius:18px;overflow:hidden;box-shadow:var(--sha);}
+    .q-hdr{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;}
+    .q-hdr.qh-critical{background:linear-gradient(135deg,var(--red-600),#9f1239);}
+    .q-hdr.qh-urgent{background:linear-gradient(135deg,var(--orange-500),#d97706);}
+    .q-hdr.qh-routine{background:linear-gradient(135deg,var(--green-600),#065f46);}
+    .q-hdr.qh-done{background:linear-gradient(135deg,var(--indigo-600),#4338ca);}
+    .qh-info .qt{font-family:'Poppins',sans-serif;font-size:14px;font-weight:700;color:#fff;}
+    .qh-info .qs{font-size:10px;color:rgba(255,255,255,.75);}
+    .qh-cnt{background:rgba(255,255,255,.25);backdrop-filter:blur(8px);border-radius:10px;padding:3px 11px;font-family:'Poppins',sans-serif;font-size:17px;font-weight:800;color:#fff;}
+    .q-body{background:var(--white);border:1px solid;border-top:none;min-height:260px;max-height:440px;overflow-y:auto;}
+    .qh-critical+.q-body{border-color:rgba(239,68,68,.2);}
+    .qh-urgent+.q-body{border-color:rgba(249,115,22,.2);}
+    .qh-routine+.q-body{border-color:rgba(34,197,94,.2);}
+    .qh-done+.q-body{border-color:rgba(79,70,229,.2);}
+    .q-body::-webkit-scrollbar{width:3px;}
+    .q-body::-webkit-scrollbar-thumb{background:var(--slate-200);border-radius:2px;}
+
+    .p-card{padding:12px 16px;border-bottom:1px solid var(--slate-100);cursor:pointer;transition:background .15s;display:flex;flex-direction:column;gap:5px;}
+    .p-card:last-child{border-bottom:none;}
+    .p-card:hover{background:var(--slate-50);}
+    .p-card.critical:hover{background:var(--red-50);}
+    .p-card.urgent:hover{background:var(--orange-50);}
+    .p-card.routine:hover{background:var(--green-50);}
+    .p-card.done:hover{background:#eef2ff;}
+    .pc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:6px;}
+    .pc-nm{font-size:13px;font-weight:700;color:var(--slate-900);}
+    .pc-tk{font-size:11px;font-weight:600;color:var(--slate-400);}
+    .pc-meta{display:flex;gap:8px;font-size:11px;color:var(--slate-500);}
+    .pc-chief{font-size:12px;color:var(--slate-600);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+    .pc-time{font-size:10px;color:var(--slate-400);}
+    .accept-btn{width:100%;margin-top:7px;padding:7px;background:linear-gradient(135deg,var(--red-600),var(--red-700));border:none;border-radius:9px;color:#fff;font-family:'Poppins',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;}
+    .accept-btn:hover{transform:scale(1.02);}
+    .empty-q{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:44px 18px;text-align:center;}
+    .eq-ico{font-size:36px;margin-bottom:10px;}
+    .eq-txt{font-size:13px;color:var(--slate-400);}
+
+    /* ── MODAL ── */
+    .overlay{display:none;position:fixed;inset:0;z-index:500;background:rgba(15,23,42,.65);backdrop-filter:blur(6px);align-items:flex-start;justify-content:center;padding:24px;overflow-y:auto;}
+    .overlay.open{display:flex;}
+    .modal{background:var(--white);border-radius:22px;width:100%;max-width:740px;margin:auto;box-shadow:var(--sha-xl);animation:pop .28s cubic-bezier(0.34,1.56,.64,1);}
+    @keyframes pop{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+
+    /* Modal tabs */
+    .modal-tabs{display:flex;border-bottom:1px solid var(--slate-200);overflow:hidden;border-radius:22px 22px 0 0;}
+    .m-tab{flex:1;padding:16px;text-align:center;font-size:13px;font-weight:600;color:var(--slate-500);cursor:pointer;border:none;background:transparent;transition:all .2s;border-bottom:3px solid transparent;}
+    .m-tab.active{color:var(--cyan-600);border-bottom-color:var(--cyan-600);background:var(--cyan-50);}
+    .m-tab:hover:not(.active){background:var(--slate-50);}
+    .tab-panel{display:none;}
+    .tab-panel.active{display:block;}
+
+    /* Modal header */
+    .modal-hdr{padding:20px 26px;display:flex;align-items:center;justify-content:space-between;}
+    .modal-level{padding:4px 13px;border-radius:20px;font-size:12px;font-weight:700;letter-spacing:.4px;}
+    .modal-level.CRITICAL{background:var(--red-100);color:var(--red-700);}
+    .modal-level.URGENT{background:var(--orange-100);color:var(--orange-700);}
+    .modal-level.ROUTINE{background:var(--green-100);color:var(--green-700);}
+    .modal-level.COMPLETED{background:#eef2ff;color:var(--indigo-600);}
+    .modal-close{width:34px;height:34px;border-radius:50%;background:var(--slate-100);border:none;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s;}
+    .modal-close:hover{background:var(--slate-200);}
+    .modal-body{padding:0 26px 24px;}
+    .modal-name{font-family:'Poppins',sans-serif;font-size:20px;font-weight:700;color:var(--slate-900);margin-bottom:3px;}
+    .modal-ticket{font-size:13px;font-weight:600;color:var(--cyan-600);margin-bottom:18px;}
+    .mg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
+    .mg-item{background:var(--slate-50);border-radius:9px;padding:10px 13px;}
+    .mg-label{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--slate-400);margin-bottom:3px;}
+    .mg-val{font-size:13px;font-weight:600;color:var(--slate-800);}
+    .mbox-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--cyan-600);margin-bottom:8px;}
+    .ai-box{background:linear-gradient(135deg,var(--cyan-50),#e0e7ff);border:1px solid rgba(8,145,178,.2);border-radius:12px;padding:15px;margin-bottom:14px;}
+    .ai-box p,.rec-box p{font-size:13px;color:var(--slate-700);line-height:1.8;}
+    .rec-box{background:var(--green-50);border:1px solid rgba(34,197,94,.25);border-radius:12px;padding:15px;margin-bottom:14px;}
+    .modal-ftr{padding:16px 26px;border-top:1px solid var(--slate-100);display:flex;gap:10px;flex-wrap:wrap;}
+    .btn-go-rx{flex:1;padding:12px;background:linear-gradient(135deg,var(--cyan-600),var(--indigo-600));border:none;border-radius:11px;color:#fff;font-family:'Poppins',sans-serif;font-weight:700;font-size:14px;cursor:pointer;transition:all .2s;}
+    .btn-go-rx:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(8,145,178,.35);}
+    .btn-close{padding:12px 18px;background:var(--slate-100);border:1px solid var(--slate-200);border-radius:11px;font-size:13px;font-weight:600;color:var(--slate-600);cursor:pointer;transition:all .2s;}
+    .btn-close:hover{background:var(--slate-200);}
+
+    /* ── PRESCRIPTION BUILDER ── */
+    .rx-section{padding:20px 26px 10px;}
+    .rx-header{display:flex;align-items:center;gap:10px;margin-bottom:18px;}
+    .rx-icon{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,var(--cyan-50),#e0e7ff);display:flex;align-items:center;justify-content:center;font-size:20px;}
+    .rx-title{font-family:'Poppins',sans-serif;font-size:17px;font-weight:700;color:var(--slate-900);}
+    .rx-sub{font-size:12px;color:var(--slate-500);}
+
+    /* Rx table */
+    .rx-table-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--slate-200);margin-bottom:14px;}
+    table.rx-table{width:100%;border-collapse:collapse;}
+    .rx-table th{background:var(--slate-800);color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:10px 12px;text-align:left;white-space:nowrap;}
+    .rx-table td{padding:8px 10px;border-bottom:1px solid var(--slate-100);vertical-align:middle;}
+    .rx-table tr:last-child td{border-bottom:none;}
+    .rx-table tr:hover td{background:var(--cyan-50);}
+    .rx-input{width:100%;border:1.5px solid var(--slate-200);border-radius:8px;padding:8px 10px;font-size:13px;font-family:'Inter',sans-serif;color:var(--slate-800);outline:none;transition:border-color .2s;}
+    .rx-input:focus{border-color:var(--cyan-500);box-shadow:0 0 0 3px rgba(6,182,212,.12);}
+    .rx-input.with-mic{padding-right:80px;}
+    .rx-select{width:100%;border:1.5px solid var(--slate-200);border-radius:8px;padding:8px 10px;font-size:12px;font-family:'Inter',sans-serif;color:var(--slate-800);outline:none;background:#fff;cursor:pointer;}
+    .rx-select:focus{border-color:var(--cyan-500);}
+    .rx-del{width:30px;height:30px;border-radius:8px;background:var(--red-50);border:1px solid rgba(239,68,68,.3);color:var(--red-500);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+    .rx-del:hover{background:var(--red-100);}
+    .btn-add-row{display:flex;align-items:center;gap:8px;padding:9px 17px;background:var(--white);border:1.5px dashed var(--cyan-300);border-radius:10px;font-size:13px;font-weight:600;color:var(--cyan-600);cursor:pointer;transition:all .2s;width:fit-content;}
+    .btn-add-row:hover{background:var(--cyan-50);border-style:solid;}
+
+    /* Advice */
+    .advice-section{margin:14px 0;}
+    .advice-label{font-size:12px;font-weight:700;color:var(--slate-600);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;}
+    .advice-wrap{position:relative;}
+    .advice-textarea{width:100%;border:1.5px solid var(--slate-200);border-radius:12px;padding:13px 100px 13px 14px;font-size:14px;font-family:'Inter',sans-serif;color:var(--slate-800);outline:none;resize:vertical;min-height:90px;transition:border-color .2s;line-height:1.7;}
+    .advice-textarea:focus{border-color:var(--cyan-500);box-shadow:0 0 0 3px rgba(6,182,212,.12);}
+    .advice-mic-wrap{position:absolute;top:10px;right:10px;display:flex;align-items:center;gap:5px;}
+
+    /* Finalize */
+    .rx-footer{padding:14px 26px 22px;display:flex;gap:10px;flex-wrap:wrap;}
+    .btn-finalize{flex:1;padding:14px;background:linear-gradient(135deg,var(--green-600),#065f46);border:none;border-radius:12px;color:#fff;font-family:'Poppins',sans-serif;font-weight:700;font-size:15px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;}
+    .btn-finalize:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(22,163,74,.35);}
+    .btn-finalize.done-state{background:linear-gradient(135deg,#475569,#334155);}
+    .btn-print{padding:14px 20px;background:var(--white);border:1.5px solid var(--slate-200);border-radius:12px;font-size:13px;font-weight:600;color:var(--slate-600);cursor:pointer;transition:all .2s;}
+    .btn-print:hover{background:var(--slate-100);}
+
+    /* Summary receipt */
+    .rx-summary{background:linear-gradient(135deg,#f8fafc,#ecfeff);border:1px solid var(--cyan-100);border-radius:14px;padding:20px;margin:14px 26px;display:none;}
+    .rx-summary.show{display:block;}
+    .rx-sum-title{font-family:'Poppins',sans-serif;font-size:15px;font-weight:700;color:var(--slate-900);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+    .rx-sum-rows{display:flex;flex-direction:column;gap:6px;}
+    .rx-sum-row{display:flex;gap:10px;font-size:13px;}
+    .rx-sum-row span:first-child{font-weight:700;color:var(--slate-800);min-width:36px;}
+    .rsr-detail{color:var(--slate-600);}
+    .rx-sum-divider{height:1px;background:var(--slate-200);margin:10px 0;}
+    .rx-advice-preview{font-size:13px;color:var(--slate-700);line-height:1.7;font-style:italic;}
+
+    /* In-table mic override */
+    .td-mic-wrap{position:relative;display:flex;align-items:center;gap:6px;}
+    .td-mic-wrap input{flex:1;}
+    .td-mic-btn{width:28px;height:28px;border-radius:8px;background:var(--cyan-50);border:1.5px solid var(--cyan-200);display:flex;align-items:center;justify-content:center;color:var(--cyan-600);cursor:pointer;transition:all .2s;flex-shrink:0;}
+    .td-mic-btn svg{width:13px;height:13px;}
+    .td-mic-btn:hover{background:var(--cyan-100);}
+    .td-mic-btn.mic-listening{background:var(--red-50);border-color:var(--red-400);color:var(--red-500);animation:mic-pulse 1s ease-in-out infinite;}
+    .td-lang-btn{height:24px;padding:0 7px;background:var(--slate-100);border:1px solid var(--slate-200);border-radius:6px;font-size:10px;font-weight:700;color:var(--slate-600);cursor:pointer;}
+    .td-lang-btn[data-lang="hi"]{background:#fef3c7;border-color:#fcd34d;color:#92400e;}
+
+    @media(max-width:600px){.mg-grid{grid-template-columns:1fr;}.modal{border-radius:16px;}.rx-table th,.rx-table td{padding:7px 8px;font-size:11px;}}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="logo"><div class="logo-mark">🏥</div><span class="logo-text">Rapid<span>AID</span></span></a>
+    <div class="nav-div"></div>
+    <span class="nav-sect">Doctor Dashboard</span>
+    <div class="nav-sp"></div>
+    <div class="offline-pill" id="offlinePill"><span class="dot-o"></span>⚡ Offline — Saving locally</div>
+    <div class="live-pill" id="livePill"><span class="dot-g"></span>Live</div>
+    <div class="doc-chip">
+      <div class="doc-av" id="docAv">D</div>
+      <div><div class="doc-nm" id="docNm">—</div><div class="doc-sp" id="docSp">—</div></div>
+    </div>
+    <button class="btn-logout" onclick="logout()">Sign Out</button>
+  </div>
+</nav>
+
+<div class="layout">
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card s-total"><div class="stat-icon">👥</div><div class="stat-num" id="stTotal">—</div><div class="stat-lbl">Total Today</div></div>
+    <div class="stat-card s-critical"><div class="stat-icon">🚨</div><div class="stat-num" id="stCrit">—</div><div class="stat-lbl">Critical</div></div>
+    <div class="stat-card s-urgent"><div class="stat-icon">⚠️</div><div class="stat-num" id="stUrg">—</div><div class="stat-lbl">Urgent</div></div>
+    <div class="stat-card s-routine"><div class="stat-icon">✅</div><div class="stat-num" id="stRout">—</div><div class="stat-lbl">Routine</div></div>
+    <div class="stat-card s-done"><div class="stat-icon">🏁</div><div class="stat-num" id="stDone">—</div><div class="stat-lbl">Completed</div></div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <div class="sync-badge">🔄 Auto-refresh every 30s</div>
+      <span id="lastUpdated" style="font-size:12px;color:#94a3b8;">—</span>
+    </div>
+    <button class="refresh-btn" onclick="loadData()">↻ Refresh Now</button>
+  </div>
+
+  <!-- 4-column queues -->
+  <div class="queues">
+    <div class="q-panel">
+      <div class="q-hdr qh-critical"><div class="qh-info"><div class="qt">🚨 CRITICAL</div><div class="qs">Immediate attention</div></div><span class="qh-cnt" id="cntCrit">0</span></div>
+      <div class="q-body" id="qCrit"></div>
+    </div>
+    <div class="q-panel">
+      <div class="q-hdr qh-urgent"><div class="qh-info"><div class="qt">⚠️ URGENT</div><div class="qs">Same-day care</div></div><span class="qh-cnt" id="cntUrg">0</span></div>
+      <div class="q-body" id="qUrg"></div>
+    </div>
+    <div class="q-panel">
+      <div class="q-hdr qh-routine"><div class="qh-info"><div class="qt">📋 ROUTINE</div><div class="qs">Stable queue</div></div><span class="qh-cnt" id="cntRout">0</span></div>
+      <div class="q-body" id="qRout"></div>
+    </div>
+    <div class="q-panel">
+      <div class="q-hdr qh-done"><div class="qh-info"><div class="qt">🏁 COMPLETED</div><div class="qs">Treated patients</div></div><span class="qh-cnt" id="cntDone">0</span></div>
+      <div class="q-body" id="qDone"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     PATIENT MODAL — Two-Tab: Triage Info + Prescription
+═══════════════════════════════════════════════ -->
+<div class="overlay" id="overlay" onclick="closeOverlay(event)">
+  <div class="modal" id="modal">
+
+    <!-- Tab bar -->
+    <div class="modal-tabs">
+      <button class="m-tab active" id="tab-triage" onclick="switchTab('triage')">📋 Triage Info</button>
+      <button class="m-tab" id="tab-rx" onclick="switchTab('rx')">💊 Clinical Treatment</button>
+    </div>
+
+    <!-- ── TAB 1: Triage Info ── -->
+    <div class="tab-panel active" id="panel-triage">
+      <div class="modal-hdr">
+        <span class="modal-level" id="mLevel">ROUTINE</span>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-name" id="mName">—</div>
+        <div class="modal-ticket" id="mTicket">—</div>
+        <div class="mg-grid" id="mGrid"><!-- filled by JS --></div>
+        <div class="mbox-title">🤖 AI Triage Assessment</div>
+        <div class="ai-box"><p id="mReasoning">—</p></div>
+        <div class="mbox-title">📋 Recommendations</div>
+        <div class="rec-box"><p id="mRec">—</p></div>
+      </div>
+      <div class="modal-ftr">
+        <button class="btn-go-rx" onclick="switchTab('rx')">💊 Write Prescription →</button>
+        <button class="btn-close" onclick="closeModal()">Close</button>
+      </div>
+    </div>
+
+    <!-- ── TAB 2: Prescription Builder ── -->
+    <div class="tab-panel" id="panel-rx">
+      <div class="modal-hdr">
+        <div>
+          <div style="font-family:'Poppins',sans-serif;font-size:16px;font-weight:700;color:#0f172a;">Clinical Treatment</div>
+          <div style="font-size:12px;color:#64748b;" id="rxPatientName">Patient: —</div>
+        </div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+
+      <div class="rx-section">
+        <div class="rx-header">
+          <div class="rx-icon">💊</div>
+          <div><div class="rx-title">Prescription Builder</div><div class="rx-sub">Add medicines &amp; instructions for this patient</div></div>
+        </div>
+
+        <!-- Medicine table -->
+        <div class="rx-table-wrap">
+          <table class="rx-table">
+            <thead>
+              <tr>
+                <th style="min-width:160px;">Medicine Name 🎤</th>
+                <th style="min-width:90px;">Dosage</th>
+                <th style="min-width:110px;">Frequency</th>
+                <th style="min-width:90px;">Duration</th>
+                <th style="width:40px;">Del</th>
+              </tr>
+            </thead>
+            <tbody id="rxTbody">
+              <!-- rows injected by JS -->
+            </tbody>
+          </table>
+        </div>
+        <button class="btn-add-row" onclick="addRxRow()">＋ Add Medicine</button>
+
+        <!-- Advice / Doctor's Notes -->
+        <div class="advice-section">
+          <div class="advice-label">📝 General Instructions (Diet, Rest, Follow-up)</div>
+          <div class="advice-wrap">
+            <textarea class="advice-textarea" id="rxAdvice" placeholder="e.g. Rest for 3 days. Avoid spicy food. Return if fever exceeds 102°F. Follow-up in 1 week.&#10;e.g. आराम करें, तीखा खाना न खाएं, एक हफ्ते बाद आएं।"></textarea>
+            <div class="advice-mic-wrap">
+              <button type="button" class="td-lang-btn" data-lang="en" onclick="STT.toggleLang(this)" title="Language">En</button>
+              <button type="button" class="td-mic-btn" onclick="STT.toggle(this,'rxAdvice')" title="Speak instructions">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10a7 7 0 0014 0"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Digital Prescription Summary (shown after finalise) -->
+      <div class="rx-summary" id="rxSummary">
+        <div class="rx-sum-title">✅ Digital Prescription Generated</div>
+        <div class="rx-sum-rows" id="rxSumRows"></div>
+        <div class="rx-sum-divider"></div>
+        <div class="advice-label">General Instructions</div>
+        <div class="rx-advice-preview" id="rxSumAdvice"></div>
+      </div>
+
+      <div class="rx-footer">
+        <button class="btn-finalize" id="finalizeBtn" onclick="finalizeTreatment()">🏁 Finalize Treatment & Move to Completed</button>
+        <button class="btn-print" onclick="printRx()">🖨️ Print</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ── State ── */
+  let allPatients = [];
+  let completedPatients = JSON.parse(localStorage.getItem('completedPatients') || '[]');
+  let rxStore = JSON.parse(localStorage.getItem('rxStore') || '{}'); // ticket -> {rows, advice}
+  let currentPatientIdx = null;
+  let rxRowCount = 0;
+
+  /* ── Auth ── */
+  const stored = sessionStorage.getItem('loggedDoctor');
+  if (!stored) { window.location.href = '/doctor-login'; }
+  const doc = JSON.parse(stored || '{}');
+  document.getElementById('docNm').textContent = doc.name || 'Doctor';
+  document.getElementById('docSp').textContent = doc.specialization || 'General Physician';
+  document.getElementById('docAv').textContent = (doc.name||'D').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  function logout(){ sessionStorage.removeItem('loggedDoctor'); window.location.href='/doctor-login'; }
+
+  /* ── Connectivity ── */
+  function updateConn(){
+    document.getElementById('offlinePill').style.display = navigator.onLine ? 'none' : 'flex';
+    document.getElementById('livePill').style.display = navigator.onLine ? 'flex' : 'none';
+  }
+  window.addEventListener('online', updateConn); window.addEventListener('offline', updateConn); updateConn();
+
+  /* ── Data Loading ── */
+  async function loadData(){
+    try{
+      const res = await fetch('/api/waiting-list');
+      const data = await res.json();
+      allPatients = data.rows || [];
+      renderQueues();
+      document.getElementById('lastUpdated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+    } catch(e){ console.error(e); }
+  }
+
+  function renderQueues(){
+    const crit = allPatients.filter(p=>p['Triage Level']==='CRITICAL');
+    const urg  = allPatients.filter(p=>p['Triage Level']==='URGENT');
+    const rout = allPatients.filter(p=>p['Triage Level']==='ROUTINE');
+    const done = completedPatients;
+
+    ['stTotal','stCrit','stUrg','stRout','stDone'].forEach((id,i)=>{
+      document.getElementById(id).textContent = [allPatients.length+done.length, crit.length, urg.length, rout.length, done.length][i];
+    });
+    ['cntCrit','cntUrg','cntRout','cntDone'].forEach((id,i)=>{
+      document.getElementById(id).textContent = [crit.length, urg.length, rout.length, done.length][i];
+    });
+
+    renderQ('qCrit', crit, 'critical', {icon:'✅', txt:'No critical cases'});
+    renderQ('qUrg',  urg,  'urgent',   {icon:'👍', txt:'No urgent cases'});
+    renderQ('qRout', rout, 'routine',  {icon:'🌟', txt:'Waiting list is clear'});
+    renderQDone('qDone', done);
+  }
+
+  function renderQ(id, rows, level, empty){
+    const el = document.getElementById(id);
+    if(!rows.length){ el.innerHTML=`<div class="empty-q"><div class="eq-ico">${empty.icon}</div><div class="eq-txt">${empty.txt}</div></div>`; return; }
+    el.innerHTML = rows.map(p=>{
+      const idx = allPatients.indexOf(p);
+      const acceptBtn = level==='critical' ? `<button class="accept-btn" onclick="openModal(${idx});event.stopPropagation()">🚑 Accept & View Details</button>` : '';
+      return `<div class="p-card ${level}" onclick="openModal(${idx})">
+        <div class="pc-top"><span class="pc-nm">${p['Patient Name']||'—'}</span><span class="pc-tk">${p['Ticket No.']||''}</span></div>
+        <div class="pc-meta"><span>👤 ${p['Age']||'?'}y ${p['Gender']||''}</span><span>·</span><span>❤️ Pain ${p['Pain Scale']||'?'}/10</span></div>
+        <div class="pc-chief">🩺 ${p['Chief Complaint']||'—'}</div>
+        <div class="pc-time">🕐 ${p['Date']||''} ${p['Time']||''} · ${p['Duration']||''}</div>
+        ${acceptBtn}
+      </div>`;
+    }).join('');
+  }
+
+  function renderQDone(id, rows){
+    const el = document.getElementById(id);
+    if(!rows.length){ el.innerHTML=`<div class="empty-q"><div class="eq-ico">🏁</div><div class="eq-txt">No completed cases yet</div></div>`; return; }
+    el.innerHTML = rows.map((p,i)=>`
+      <div class="p-card done" onclick="openCompletedModal(${i})">
+        <div class="pc-top"><span class="pc-nm">${p['Patient Name']||'—'}</span><span class="pc-tk" style="color:#6366f1;">✅ Treated</span></div>
+        <div class="pc-meta"><span>👤 ${p['Age']||'?'}y ${p['Gender']||''}</span></div>
+        <div class="pc-chief">💊 ${(rxStore[p['Ticket No.']]?.rows || []).length} medicine(s) prescribed</div>
+        <div class="pc-time" style="color:#6366f1;">🏁 ${p.completedAt || ''}</div>
+      </div>`).join('');
+  }
+
+  /* ── Modal ── */
+  function openModal(idx){
+    currentPatientIdx = idx;
+    const p = allPatients[idx];
+    if(!p) return;
+    const level = p['Triage Level']||'ROUTINE';
+    const lEl = document.getElementById('mLevel');
+    lEl.className = 'modal-level '+level; lEl.textContent = level;
+    document.getElementById('mName').textContent = p['Patient Name']||'—';
+    document.getElementById('mTicket').textContent = `🎫 ${p['Ticket No.']||'N/A'} · 📅 ${p['Date']||''} at ${p['Time']||''}`;
+    document.getElementById('rxPatientName').textContent = 'Patient: '+(p['Patient Name']||'—');
+    document.getElementById('mReasoning').textContent = p['AI Reasoning']||'No AI notes.';
+    document.getElementById('mRec').textContent = p['Recommendations']||'Standard care.';
+    document.getElementById('mGrid').innerHTML = [
+      ['Age', (p['Age']||'—')+' years'], ['Gender', p['Gender']||'—'],
+      ['Phone', p['Phone']||'N/A'], ['Pain Scale', (p['Pain Scale']||'—')+' / 10'],
+      ['Consciousness', p['Consciousness']||'—'], ['Duration', p['Duration']||'—'],
+      ['Chief Complaint', p['Chief Complaint']||'—', true],
+      ['Medical History', p['Medical History']||'None', true],
+      ['Medications', p['Medications']||'None', true],
+      ['Allergies', p['Allergies']||'None', true],
+    ].map(([l,v,full])=>`
+      <div class="mg-item" ${full?'style="grid-column:1/-1"':''}>
+        <div class="mg-label">${l}</div><div class="mg-val">${v}</div>
+      </div>`).join('');
+
+    // Load saved Rx or init fresh
+    const ticket = p['Ticket No.']||'tmp';
+    const saved = rxStore[ticket];
+    initRxBuilder(saved?.rows||[], saved?.advice||'', ticket);
+
+    switchTab('triage');
+    document.getElementById('overlay').classList.add('open');
+  }
+
+  function openCompletedModal(i){
+    const p = completedPatients[i];
+    if(!p) return;
+    // Reuse same modal but show completed state
+    currentPatientIdx = null;
+    document.getElementById('mLevel').className='modal-level COMPLETED'; document.getElementById('mLevel').textContent='COMPLETED';
+    document.getElementById('mName').textContent = p['Patient Name']||'—';
+    document.getElementById('mTicket').textContent = `🎫 ${p['Ticket No.']||'N/A'} · 🏁 Treated at ${p.completedAt||''}`;
+    document.getElementById('rxPatientName').textContent = 'Patient: '+(p['Patient Name']||'—');
+    document.getElementById('mReasoning').textContent = p['AI Reasoning']||'No AI notes.';
+    document.getElementById('mRec').textContent = p['Recommendations']||'Standard care.';
+    document.getElementById('mGrid').innerHTML = [
+      ['Age', (p['Age']||'—')+' years'], ['Gender', p['Gender']||'—'],
+      ['Chief Complaint', p['Chief Complaint']||'—', true],
+    ].map(([l,v,full])=>`<div class="mg-item" ${full?'style="grid-column:1/-1"':''}><div class="mg-label">${l}</div><div class="mg-val">${v}</div></div>`).join('');
+
+    const ticket = p['Ticket No.']||'';
+    const saved = rxStore[ticket];
+    initRxBuilder(saved?.rows||[], saved?.advice||'', ticket, true);
+    switchTab('rx');
+    document.getElementById('overlay').classList.add('open');
+  }
+
+  function closeModal(){ document.getElementById('overlay').classList.remove('open'); STT.stop(); }
+  function closeOverlay(e){ if(e.target===document.getElementById('overlay')) closeModal(); }
+
+  function switchTab(tab){
+    document.querySelectorAll('.m-tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    document.getElementById('tab-'+tab).classList.add('active');
+    document.getElementById('panel-'+tab).classList.add('active');
+  }
+
+  /* ── RX Builder ── */
+  let currentTicket = null;
+
+  function initRxBuilder(savedRows, savedAdvice, ticket, readonly=false){
+    currentTicket = ticket;
+    rxRowCount = 0;
+    document.getElementById('rxTbody').innerHTML = '';
+    document.getElementById('rxAdvice').value = savedAdvice||'';
+    document.getElementById('rxSummary').classList.remove('show');
+    const finBtn = document.getElementById('finalizeBtn');
+    finBtn.textContent = '🏁 Finalize Treatment & Move to Completed';
+    finBtn.classList.remove('done-state');
+    finBtn.disabled = false;
+
+    if(savedRows.length){ savedRows.forEach(r=>addRxRow(r)); }
+    else { addRxRow(); } // Start with one blank row
+
+    if(readonly){
+      // Mark as done already
+      finBtn.textContent = '✅ Treatment Finalized';
+      finBtn.classList.add('done-state');
+      finBtn.disabled = true;
+      showRxSummary();
+    }
+  }
+
+  function addRxRow(data={}){
+    rxRowCount++;
+    const rowId = 'rx-row-'+rxRowCount;
+    const tbody = document.getElementById('rxTbody');
+    const tr = document.createElement('tr');
+    tr.id = rowId;
+    tr.innerHTML = `
+      <td>
+        <div class="td-mic-wrap">
+          <input class="rx-input" placeholder="e.g. Paracetamol" value="${data.med||''}" id="med-${rxRowCount}" />
+          <button type="button" class="td-lang-btn" data-lang="en" onclick="STT.toggleLang(this)">En</button>
+          <button type="button" class="td-mic-btn" onclick="STT.toggle(this,'med-${rxRowCount}')" title="Speak medicine name">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10a7 7 0 0014 0"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+          </button>
+        </div>
+      </td>
+      <td><input class="rx-input" placeholder="e.g. 500mg" value="${data.dose||''}" id="dose-${rxRowCount}" /></td>
+      <td>
+        <select class="rx-select" id="freq-${rxRowCount}">
+          ${['Once Daily','1-0-1 (Morn & Night)','1-1-1 (3x daily)','0-0-1 (Night only)','SOS (When needed)','Twice Weekly'].map(f=>`<option ${(data.freq||'Once Daily')===f?'selected':''}>${f}</option>`).join('')}
+        </select>
+      </td>
+      <td><input class="rx-input" placeholder="e.g. 5" value="${data.dur||''}" id="dur-${rxRowCount}" style="width:90px;" /></td>
+      <td><button class="rx-del" onclick="removeRxRow('${rowId}')" title="Remove">×</button></td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  function removeRxRow(id){
+    const row = document.getElementById(id);
+    if(row) row.remove();
+    if(document.getElementById('rxTbody').children.length===0) addRxRow();
+  }
+
+  function getRxData(){
+    const rows = [];
+    document.querySelectorAll('#rxTbody tr').forEach(tr=>{
+      const inputs = tr.querySelectorAll('input');
+      const sel = tr.querySelector('select');
+      const med = inputs[0]?.value?.trim();
+      if(!med) return;
+      rows.push({ med, dose:inputs[1]?.value?.trim()||'—', freq:sel?.value||'Once Daily', dur:inputs[2]?.value?.trim()||'—' });
+    });
+    return { rows, advice: document.getElementById('rxAdvice').value.trim() };
+  }
+
+  function showRxSummary(){
+    const { rows, advice } = getRxData();
+    const sumEl = document.getElementById('rxSumRows');
+    sumEl.innerHTML = rows.length ? rows.map((r,i)=>`
+      <div class="rx-sum-row">
+        <span>${i+1}.</span>
+        <div class="rsr-detail"><strong>${r.med}</strong> ${r.dose} — ${r.freq} for ${r.dur} day(s)</div>
+      </div>`).join('') : '<div style="font-size:13px;color:#94a3b8;">No medicines prescribed.</div>';
+    document.getElementById('rxSumAdvice').textContent = advice || 'No special instructions.';
+    document.getElementById('rxSummary').classList.add('show');
+  }
+
+  function finalizeTreatment(){
+    if(currentPatientIdx === null) return;
+    const p = allPatients[currentPatientIdx];
+    const { rows, advice } = getRxData();
+
+    // Save Rx
+    const ticket = p['Ticket No.']||'tmp';
+    rxStore[ticket] = { rows, advice };
+    localStorage.setItem('rxStore', JSON.stringify(rxStore));
+
+    // Move to completed
+    p.completedAt = new Date().toLocaleString('en-IN');
+    completedPatients.unshift(p);
+    localStorage.setItem('completedPatients', JSON.stringify(completedPatients));
+    allPatients.splice(currentPatientIdx, 1);
+
+    // Show summary
+    showRxSummary();
+    const finBtn = document.getElementById('finalizeBtn');
+    finBtn.textContent = '✅ Treatment Finalized';
+    finBtn.classList.add('done-state');
+    finBtn.disabled = true;
+
+    toast('✅ Patient moved to Completed queue. Prescription saved.');
+    renderQueues();
+  }
+
+  function printRx(){
+    const { rows, advice } = getRxData();
+    const name = document.getElementById('mName').textContent;
+    const ticket = document.getElementById('mTicket').textContent;
+    const date = new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
+    const medRows = rows.map((r,i)=>`<tr><td>${i+1}</td><td>${r.med}</td><td>${r.dose}</td><td>${r.freq}</td><td>${r.dur} day(s)</td></tr>`).join('');
+    const w = window.open('','_blank');
+    w.document.write(`<!DOCTYPE html><html><head><title>Prescription</title>
+    <style>body{font-family:Arial,sans-serif;max-width:700px;margin:30px auto;padding:20px;}
+    h2{color:#0891b2;}table{width:100%;border-collapse:collapse;margin:16px 0;}
+    th{background:#0891b2;color:#fff;padding:9px;}td{border:1px solid #e2e8f0;padding:8px;}
+    .footer{margin-top:30px;border-top:2px solid #e2e8f0;padding-top:16px;}
+    .sig{margin-top:40px;text-align:right;color:#475569;}</style></head><body>
+    <h2>🏥 TriageAID Prescription</h2>
+    <p><strong>Patient:</strong> ${name} &nbsp;|&nbsp; <strong>Ticket:</strong> ${ticket}</p>
+    <p><strong>Date:</strong> ${date} &nbsp;|&nbsp; <strong>Doctor:</strong> ${doc.name||'—'} (${doc.specialization||''})</p>
+    <p><strong>Clinic:</strong> ${doc.clinic||'Rural Health Centre'} &nbsp;|&nbsp; <strong>License:</strong> ${doc.license||'—'}</p>
+    <table><thead><tr><th>#</th><th>Medicine</th><th>Dosage</th><th>Frequency</th><th>Duration</th></tr></thead>
+    <tbody>${medRows||'<tr><td colspan=5>No medicines</td></tr>'}</tbody></table>
+    <div class="footer"><strong>Instructions:</strong><p>${advice||'No special instructions.'}</p></div>
+    <div class="sig"><p>___________________________</p><p>${doc.name||'Doctor'}<br/>${doc.specialization||''}</p></div>
+    </body></html>`);
+    w.document.close(); w.print();
+  }
+
+  /* ── Toast ── */
+  function toast(msg){
+    const t = document.createElement('div');
+    t.style.cssText='position:fixed;bottom:24px;right:24px;z-index:9999;background:#16a34a;color:#fff;padding:14px 22px;border-radius:12px;font-weight:600;font-size:13px;box-shadow:0 8px 24px rgba(22,163,74,.4);';
+    t.textContent=msg; document.body.appendChild(t);
+    setTimeout(()=>t.remove(), 3500);
+  }
+
+  loadData();
+  setInterval(loadData, 30000);
+</script>
+</body>
+</html>
+

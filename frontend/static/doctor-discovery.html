@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Find Nearby Doctors — TriageAID</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+
+    @keyframes slideUp   { from{transform:translateY(100%);opacity:0}  to{transform:translateY(0);opacity:1} }
+    @keyframes fadeIn    { from{opacity:0;transform:scale(.96)}         to{opacity:1;transform:scale(1)} }
+    @keyframes pulseDot  { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    .modal-sheet  { animation: slideUp .32s cubic-bezier(.34,1.56,.64,1); }
+    .profile-modal{ animation: fadeIn  .25s ease; }
+    .doctor-card  { transition: box-shadow .2s, transform .2s; }
+    .doctor-card:not(.queued):hover { box-shadow:0 10px 30px rgba(0,0,0,.1); transform:translateY(-2px); }
+    .doctor-card.queued { border-color:#6ee7b7!important; box-shadow:0 0 0 2.5px #d1fae5; }
+    .btn-book { transition: background .15s, transform .1s; }
+    .btn-book:active:not(:disabled) { transform:scale(.97); }
+    .tab-active { background:#059669; color:white!important; }
+    input:focus, textarea:focus, select:focus { outline:none; box-shadow:0 0 0 2px #22d3ee; border-color:transparent; }
+    .no-scrollbar::-webkit-scrollbar { display:none; }
+
+    /* Payment step indicators */
+    .step-line { flex:1; height:2px; background:#e2e8f0; }
+    .step-line.done { background:#10b981; }
+
+    /* UTR verified animation */
+    @keyframes checkBounce { 0%{transform:scale(0)} 60%{transform:scale(1.2)} 100%{transform:scale(1)} }
+    .check-bounce { animation: checkBounce .4s cubic-bezier(.34,1.56,.64,1) forwards; }
+
+    /* Image upload drop zone */
+    .drop-zone { border:2px dashed #cbd5e1; transition:border-color .2s, background .2s; }
+    .drop-zone.over { border-color:#0891b2; background:#f0f9ff; }
+
+    @media (min-width:640px) { .modal-sheet { border-radius:16px!important; } }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen antialiased">
+
+<!-- ── Nav ──────────────────────────────────────────────────────────────────── -->
+<nav class="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-30 shadow-sm">
+  <div class="flex items-center gap-2">
+    <span class="text-xl">🏥</span>
+    <span class="font-black text-slate-800 text-lg">TriageAID</span>
+  </div>
+  <div class="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
+    <button id="tab-discover" onclick="showTab('discover')"
+      class="tab-active px-4 py-1.5 rounded-lg text-sm font-semibold transition-all">Find Doctors</button>
+    <button id="tab-register" onclick="showTab('register')"
+      class="px-4 py-1.5 rounded-lg text-sm font-semibold text-slate-600 transition-all">Register</button>
+  </div>
+</nav>
+
+<!-- ════════════════════════════════════════════════════════════════════════════
+     PATIENT VIEW
+     ════════════════════════════════════════════════════════════════════════════ -->
+<div id="view-discover">
+  <!-- Hero -->
+  <div class="bg-gradient-to-br from-cyan-800 via-cyan-700 to-cyan-500 text-white px-4 py-8">
+    <div class="max-w-5xl mx-auto">
+      <p class="text-xs font-bold uppercase tracking-widest opacity-70 mb-1">TriageAID • Bhubaneswar</p>
+      <h1 class="text-2xl sm:text-3xl font-black mb-1">Find Nearby Doctors</h1>
+      <p class="text-sm opacity-80 mb-5">Pay consultation fees instantly via UPI — no cash, no queues.</p>
+      <div class="relative max-w-2xl">
+        <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none"></i>
+        <input id="search-bar" type="text" oninput="filterDoctors()"
+          placeholder="Search by area, pincode, name or specialization…"
+          class="w-full pl-11 pr-10 py-3.5 rounded-2xl border-0 bg-white text-slate-800 text-sm font-medium placeholder:text-slate-400 shadow-lg focus:ring-4 focus:ring-white/30 focus:outline-none">
+        <button onclick="clearSearch()" id="search-clear" class="hidden absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Grid -->
+  <div class="max-w-5xl mx-auto px-4 py-6">
+    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+      <p class="text-sm font-semibold text-slate-600" id="result-count">3 doctors found</p>
+      <div class="flex items-center gap-2">
+        <span id="queue-badge" class="hidden items-center gap-1.5 text-xs bg-emerald-100 text-emerald-700 font-semibold px-3 py-1.5 rounded-full">
+          ✓ <span id="queue-count">0</span> in queue
+        </span>
+      </div>
+    </div>
+    <div id="doctor-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+    <div id="no-results" class="hidden text-center py-16">
+      <i data-lucide="map-pin" class="mx-auto text-slate-300 w-10 h-10 mb-3"></i>
+      <p class="text-slate-500 font-semibold">No doctors found</p>
+      <p class="text-sm text-slate-400 mt-1">Try a different area name or pincode.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════════
+     REGISTRATION
+     ════════════════════════════════════════════════════════════════════════════ -->
+<div id="view-register" class="hidden max-w-2xl mx-auto px-4 py-8">
+  <p class="text-xs text-cyan-600 font-bold uppercase tracking-widest mb-1">TriageAID</p>
+  <h1 class="text-2xl font-black text-slate-800 mb-1">Doctor Registration</h1>
+  <p class="text-sm text-slate-500 mb-6">Register to be discoverable by patients in your area.</p>
+
+  <div id="reg-success" class="hidden flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-4 mb-5">
+    <i data-lucide="check-circle" class="text-emerald-500 w-5 h-5 shrink-0"></i>
+    <div><p class="font-semibold text-emerald-800 text-sm">Registration saved!</p>
+    <p class="text-xs text-emerald-600">Your profile is now visible to nearby patients.</p></div>
+  </div>
+
+  <form id="reg-form" onsubmit="handleRegister(event)" novalidate class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
+    <!-- Personal -->
+    <div>
+      <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Personal Details</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div><label class="field-label">Full Name</label>
+          <input id="f-name" type="text" placeholder="Dr. Priya Sharma" class="field-input">
+          <p class="hidden err-msg" id="e-name">⚠ Full name is required</p></div>
+        <div><label class="field-label">Specialization</label>
+          <select id="f-spec" class="field-input appearance-none">
+            <option value="">Select…</option>
+            <option>General Physician</option><option>Pediatrician</option><option>Gynecologist</option>
+            <option>Orthopedic Surgeon</option><option>Cardiologist</option><option>Dermatologist</option>
+            <option>ENT Specialist</option><option>Ophthalmologist</option><option>Neurologist</option>
+            <option>Dentist</option><option>Other</option>
+          </select>
+          <p class="hidden err-msg" id="e-spec">⚠ Select a specialization</p></div>
+        <div class="sm:col-span-2"><label class="field-label">Medical License No.</label>
+          <input id="f-lic" type="text" placeholder="MCI-OD-2019-XXXXX" class="field-input">
+          <p class="hidden err-msg" id="e-lic">⚠ License number is required</p></div>
+        <div><label class="field-label">Qualifications</label>
+          <input id="f-qual" type="text" placeholder="MBBS, MD (General Medicine)" class="field-input">
+        </div>
+        <div><label class="field-label">Years of Experience</label>
+          <input id="f-exp" type="number" placeholder="8" min="0" class="field-input" inputmode="numeric">
+        </div>
+        <div><label class="field-label">Hospital / Clinic Name</label>
+          <input id="f-hosp" type="text" placeholder="Sunshine Clinic" class="field-input">
+        </div>
+        <div><label class="field-label">Languages Spoken</label>
+          <input id="f-lang" type="text" placeholder="English, Hindi, Odia" class="field-input">
+        </div>
+      </div>
+    </div>
+    <!-- Location -->
+    <div>
+      <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Location</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div><label class="field-label">City / Area</label>
+          <input id="f-city" type="text" placeholder="Patia, Bhubaneswar" class="field-input">
+          <p class="hidden err-msg" id="e-city">⚠ City / area is required</p></div>
+        <div><label class="field-label">Pincode</label>
+          <input id="f-pin" type="text" placeholder="751024" maxlength="6" inputmode="numeric" class="field-input">
+          <p class="hidden err-msg" id="e-pin">⚠ Enter a valid 6-digit pincode</p></div>
+      </div>
+    </div>
+    <!-- Payment -->
+    <div>
+      <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">Payment Details</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div><label class="field-label">Consultation Fee (₹)</label>
+          <input id="f-fee" type="number" placeholder="500" min="0" inputmode="numeric" class="field-input">
+          <p class="hidden err-msg" id="e-fee">⚠ Enter a valid fee</p></div>
+        <div><label class="field-label">UPI ID</label>
+          <input id="f-upi" type="text" placeholder="priya.sharma@ybl" autocapitalize="none" inputmode="email" class="field-input">
+          <p class="hidden err-msg" id="e-upi">⚠ Enter a valid UPI ID (e.g. name@ybl)</p></div>
+      </div>
+      <div id="upi-preview" class="hidden mt-3 flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2.5 text-sm text-emerald-700">
+        <i data-lucide="check-circle" class="w-4 h-4 shrink-0"></i>
+        <code class="text-xs font-mono break-all" id="upi-preview-text"></code>
+      </div>
+    </div>
+    <button type="submit" class="w-full flex items-center justify-center gap-2 min-h-14 rounded-xl bg-cyan-600 text-white font-bold text-base hover:bg-cyan-700 shadow-lg shadow-cyan-100 transition-all">
+      Register Profile <i data-lucide="chevron-right" class="w-5 h-5"></i>
+    </button>
+  </form>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════════
+     DOCTOR PROFILE MODAL
+     ════════════════════════════════════════════════════════════════════════════ -->
+<div id="profile-modal" class="fixed inset-0 z-40 hidden flex items-center justify-center p-4"
+     style="background:rgba(15,23,42,.65);backdrop-filter:blur(4px)"
+     onclick="handleProfileOverlay(event)">
+  <div class="profile-modal bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto no-scrollbar">
+    <!-- Header gradient -->
+    <div id="pm-header" class="bg-gradient-to-br from-cyan-800 to-cyan-600 text-white px-6 pt-6 pb-8 relative">
+      <button onclick="closeProfileModal()" class="absolute top-4 right-4 text-white/70 hover:text-white">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+      <div class="flex items-center gap-4">
+        <div id="pm-avatar" class="w-16 h-16 rounded-2xl bg-white/20 text-white flex items-center justify-center font-black text-2xl shadow-lg border-2 border-white/30"></div>
+        <div>
+          <p class="text-xs font-semibold opacity-70 uppercase tracking-widest mb-0.5" id="pm-spec"></p>
+          <h2 class="text-xl font-black" id="pm-name"></h2>
+          <div id="pm-stars" class="mt-1"></div>
+        </div>
+      </div>
+      <!-- Floating fee badge -->
+      <div class="absolute bottom-0 right-6 translate-y-1/2 bg-white rounded-2xl shadow-lg px-4 py-2.5 border border-slate-100">
+        <p class="text-xs text-slate-400 font-semibold">Consultation</p>
+        <p class="text-xl font-black text-emerald-700" id="pm-fee"></p>
+      </div>
+    </div>
+
+    <div class="px-6 pt-10 pb-6 space-y-5">
+      <!-- Quick stats -->
+      <div class="grid grid-cols-3 gap-3">
+        <div class="bg-slate-50 rounded-xl p-3 text-center">
+          <p class="text-xl font-black text-cyan-700" id="pm-exp"></p>
+          <p class="text-xs text-slate-400 font-semibold mt-0.5">Yrs Exp.</p>
+        </div>
+        <div class="bg-slate-50 rounded-xl p-3 text-center">
+          <p class="text-xl font-black text-cyan-700" id="pm-patients"></p>
+          <p class="text-xs text-slate-400 font-semibold mt-0.5">Patients</p>
+        </div>
+        <div class="bg-slate-50 rounded-xl p-3 text-center">
+          <p class="text-xl font-black text-cyan-700" id="pm-rating-big"></p>
+          <p class="text-xs text-slate-400 font-semibold mt-0.5">Rating</p>
+        </div>
+      </div>
+
+      <!-- Qualifications -->
+      <div>
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Qualifications</p>
+        <div id="pm-quals" class="flex flex-wrap gap-2"></div>
+      </div>
+
+      <!-- Hospital -->
+      <div>
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Hospital / Clinic</p>
+        <div class="flex items-center gap-2 text-sm text-slate-700 font-semibold">
+          <i data-lucide="building-2" class="w-4 h-4 text-cyan-500"></i>
+          <span id="pm-hospital"></span>
+        </div>
+      </div>
+
+      <!-- Location -->
+      <div class="flex items-center gap-2 text-sm text-slate-500">
+        <i data-lucide="map-pin" class="w-4 h-4 text-rose-400 shrink-0"></i>
+        <span id="pm-location"></span>
+      </div>
+
+      <!-- Languages -->
+      <div>
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Languages</p>
+        <div id="pm-langs" class="flex flex-wrap gap-2"></div>
+      </div>
+
+      <!-- Availability -->
+      <div class="flex items-center gap-2 bg-cyan-50 border border-cyan-100 rounded-xl px-4 py-3">
+        <i data-lucide="clock" class="w-4 h-4 text-cyan-600 shrink-0"></i>
+        <div>
+          <p class="text-xs text-cyan-500 font-semibold uppercase tracking-wide">Available</p>
+          <p class="text-sm font-bold text-cyan-800" id="pm-avail"></p>
+        </div>
+      </div>
+
+      <!-- Bio -->
+      <div>
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">About</p>
+        <p class="text-sm text-slate-600 leading-relaxed" id="pm-bio"></p>
+      </div>
+
+      <!-- Book button -->
+      <button id="pm-book-btn" onclick="bookFromProfile()"
+        class="w-full flex items-center justify-center gap-2 min-h-14 rounded-xl bg-emerald-600 text-white font-bold text-base hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all">
+        <i data-lucide="indian-rupee" class="w-5 h-5"></i>
+        <span id="pm-book-label"></span>
+        <i data-lucide="arrow-right" class="w-5 h-5"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════════════════
+     UPI PAYMENT MODAL (with UTR verification)
+     ════════════════════════════════════════════════════════════════════════════ -->
+<div id="upi-modal" class="fixed inset-0 z-50 hidden flex items-end sm:items-center justify-center"
+     style="background:rgba(15,23,42,.65);backdrop-filter:blur(4px)"
+     onclick="handleModalOverlay(event)">
+  <div class="modal-sheet bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[95vh] overflow-y-auto no-scrollbar">
+
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-emerald-700 to-emerald-500 text-white px-6 py-5 flex items-center justify-between">
+      <div>
+        <p class="text-xs font-semibold opacity-70 uppercase tracking-widest mb-0.5">Secure Payment</p>
+        <h2 class="text-lg font-black" id="modal-name"></h2>
+        <p class="text-sm opacity-80" id="modal-spec"></p>
+      </div>
+      <div class="text-right">
+        <p class="text-xs opacity-70">Consultation Fee</p>
+        <p class="text-3xl font-black" id="modal-fee"></p>
+      </div>
+    </div>
+
+    <!-- Trust badges -->
+    <div class="flex items-center justify-center gap-5 px-6 py-2.5 bg-emerald-50 border-b border-emerald-100 text-xs text-emerald-700 font-semibold">
+      <span class="flex items-center gap-1"><i data-lucide="shield" class="w-3.5 h-3.5"></i> Secure UPI</span>
+      <span class="flex items-center gap-1"><i data-lucide="zap" class="w-3.5 h-3.5"></i> Instant Transfer</span>
+      <span class="flex items-center gap-1"><i data-lucide="smartphone" class="w-3.5 h-3.5"></i> Any App</span>
+    </div>
+
+    <!-- Step indicator -->
+    <div class="flex items-center px-6 py-3 gap-2">
+      <div class="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-600 text-white text-xs font-bold">1</div>
+      <div class="step-line" id="step-line-1"></div>
+      <div class="flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold border-2 border-slate-300 text-slate-400" id="step2-circle">2</div>
+      <div class="step-line" id="step-line-2"></div>
+      <div class="flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold border-2 border-slate-300 text-slate-400" id="step3-circle">3</div>
+      <p class="text-xs text-slate-400 ml-1" id="step-label">Pay</p>
+    </div>
+
+    <div class="px-6 pb-5 space-y-4">
+      <!-- STEP 1: Pay -->
+      <div id="step-pay">
+        <!-- UPI ID -->
+        <div class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 mb-4">
+          <p class="text-xs text-slate-400 font-semibold uppercase tracking-wide mb-1">Paying to UPI ID</p>
+          <p class="font-bold text-slate-800 text-sm break-all" id="modal-upi-id"></p>
+        </div>
+        <!-- QR (desktop) -->
+        <div class="hidden sm:flex flex-col items-center gap-3 mb-4">
+          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
+            <i data-lucide="qr-code" class="w-3.5 h-3.5 text-cyan-500"></i> Scan with any UPI app
+          </p>
+          <div id="qr-container" class="p-4 bg-white border-2 border-slate-200 rounded-2xl shadow-sm" style="min-height:208px;display:flex;align-items:center;justify-content:center;"></div>
+          <p class="text-xs text-slate-400 text-center max-w-xs">Open Google Pay, PhonePe, or Paytm and scan to pay directly.</p>
+        </div>
+        <!-- Deeplink button -->
+        <a id="upi-deeplink" href="#"
+          class="flex items-center justify-center gap-3 w-full min-h-14 rounded-xl bg-emerald-600 text-white font-bold text-base hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all mb-2">
+          <i data-lucide="smartphone" class="w-5 h-5"></i>
+          <span id="modal-pay-label">Pay ₹0 via UPI App</span>
+        </a>
+        <p class="text-xs text-center text-slate-400 sm:hidden mb-3">Opens Google Pay / PhonePe / Paytm automatically</p>
+        <button onclick="nextStepVerify()"
+          class="w-full flex items-center justify-center gap-2 min-h-12 rounded-xl font-bold text-sm border-2 border-slate-200 text-slate-700 hover:border-cyan-400 hover:text-cyan-700 hover:bg-cyan-50 transition-all">
+          <i data-lucide="check" class="w-4 h-4"></i> I've Made the Payment — Verify Now
+        </button>
+        <button onclick="closeModal()" class="w-full text-sm text-slate-400 hover:text-slate-600 py-2 transition">Cancel</button>
+      </div>
+
+      <!-- STEP 2: Upload screenshot + UTR -->
+      <div id="step-verify" class="hidden space-y-4">
+        <div class="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800">
+          <i data-lucide="alert-triangle" class="w-4 h-4 shrink-0"></i>
+          <p>Submit your payment screenshot and UTR number to confirm your booking.</p>
+        </div>
+
+        <!-- Screenshot upload -->
+        <div>
+          <p class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Payment Screenshot</p>
+          <label for="screenshot-input" id="drop-zone"
+            class="drop-zone rounded-xl cursor-pointer flex flex-col items-center justify-center gap-2 py-6 text-slate-400 hover:border-cyan-400 hover:bg-cyan-50 hover:text-cyan-600 transition-all"
+            ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+            <i data-lucide="upload-cloud" class="w-8 h-8"></i>
+            <p class="text-sm font-semibold">Click or drag to upload screenshot</p>
+            <p class="text-xs">PNG, JPG, WEBP supported</p>
+          </label>
+          <input type="file" id="screenshot-input" accept="image/*" class="hidden" onchange="handleScreenshot(event)">
+          <!-- Preview -->
+          <div id="screenshot-preview" class="hidden mt-3 relative">
+            <img id="screenshot-img" alt="Payment screenshot" class="w-full rounded-xl border border-slate-200 max-h-48 object-contain bg-slate-50">
+            <button onclick="clearScreenshot()" class="absolute top-2 right-2 bg-white border border-slate-200 rounded-full p-1 shadow text-slate-500 hover:text-red-500">
+              <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            </button>
+            <div class="mt-1.5 flex items-center gap-1.5 text-xs text-emerald-600 font-semibold">
+              <i data-lucide="image" class="w-3.5 h-3.5"></i> Screenshot attached
+            </div>
+          </div>
+        </div>
+
+        <!-- UTR input -->
+        <div>
+          <label class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2 block">
+            UTR / Transaction Reference Number
+          </label>
+          <input id="utr-input" type="text" maxlength="24" inputmode="numeric"
+            placeholder="e.g. 426132891034"
+            class="w-full min-h-12 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-mono font-bold text-slate-800 placeholder:text-slate-400 placeholder:font-normal transition tracking-widest">
+          <p class="text-xs text-slate-400 mt-1.5">
+            Find this in your UPI app's payment history — it's 12 digits and starts with your bank code.
+          </p>
+          <p id="utr-error" class="hidden text-xs text-red-500 mt-1">⚠ Please enter a UTR number (min 6 digits)</p>
+        </div>
+
+        <!-- Submit -->
+        <button onclick="submitVerification()"
+          class="w-full flex items-center justify-center gap-2 min-h-14 rounded-xl bg-emerald-600 text-white font-bold text-base hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all">
+          <i data-lucide="shield-check" class="w-5 h-5"></i> Submit &amp; Verify Payment
+        </button>
+        <button onclick="backToPayStep()" class="w-full text-sm text-slate-400 hover:text-slate-600 py-2 transition">
+          ← Back
+        </button>
+      </div>
+
+      <!-- STEP 3: Verified -->
+      <div id="step-done" class="hidden text-center py-4 space-y-4">
+        <div class="check-bounce w-16 h-16 mx-auto bg-emerald-100 rounded-full flex items-center justify-center" id="done-icon">
+          <i data-lucide="check-circle" class="w-9 h-9 text-emerald-600"></i>
+        </div>
+        <div>
+          <h3 class="text-xl font-black text-slate-800">Payment Verified!</h3>
+          <p class="text-sm text-slate-500 mt-1">You've been added to the doctor's queue.</p>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-left">
+          <p class="text-xs text-slate-400 font-semibold uppercase tracking-wide mb-2">Booking Summary</p>
+          <div class="space-y-1.5 text-sm">
+            <div class="flex justify-between"><span class="text-slate-500">Doctor</span><span class="font-bold text-slate-800" id="done-doctor"></span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Amount Paid</span><span class="font-bold text-emerald-700" id="done-amount"></span></div>
+            <div class="flex justify-between"><span class="text-slate-500">UTR</span><span class="font-mono font-bold text-slate-700 tracking-widest" id="done-utr"></span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Status</span><span class="font-bold text-emerald-600">Confirmed ✓</span></div>
+          </div>
+        </div>
+        <button onclick="closeModal()"
+          class="w-full min-h-12 rounded-xl bg-slate-800 text-white font-bold text-sm hover:bg-slate-900 transition-all">
+          Done — View Queue
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Shared Tailwind utility classes via script ─────────────────────────── -->
+<style>
+  .field-label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#64748b; margin-bottom:6px; }
+  .field-input { width:100%; min-height:48px; border-radius:12px; border:1px solid #e2e8f0; background:#f8fafc; padding:10px 16px; font-size:14px; color:#1e293b; transition:box-shadow .15s,border-color .15s; }
+  .field-input::placeholder { color:#94a3b8; }
+  .err-msg { font-size:11px; color:#ef4444; margin-top:4px; }
+</style>
+
+<script>
+lucide.createIcons();
+
+// ──────────────────────────────────────────────────────────────────────────────
+// MOCK DATA
+// ──────────────────────────────────────────────────────────────────────────────
+const DOCTORS = [
+  {
+    id:'d1',
+    name:'Dr. Priya Sharma',
+    spec:'General Physician',
+    quals:['MBBS (SCB Medical)', 'MD – General Medicine', 'PGDCC'],
+    exp:12, patients:1240, rating:4.8,
+    hospital:'Sunshine Multispecialty Clinic',
+    city:'Patia', pin:'751024',
+    fee:350, upi:'priya.sharma@ybl',
+    avail:'Mon–Sat, 9 am – 5 pm',
+    langs:['English','Hindi','Odia'],
+    bio:'Dr. Priya Sharma has 12+ years of experience treating fever, hypertension, diabetes, and common infections. She is known for her patient-centred approach and has held camps in rural Odisha under the Aarogya Odisha initiative.',
+  },
+  {
+    id:'d2',
+    name:'Dr. Suresh Mohanty',
+    spec:'Pediatrician',
+    quals:['MBBS (MKCG Medical)', 'DCH', 'DNB – Pediatrics'],
+    exp:8, patients:870, rating:4.6,
+    hospital:'Balak Child Care Centre',
+    city:'Khandagiri', pin:'751030',
+    fee:300, upi:'suresh.mohanty@okaxis',
+    avail:'Mon–Fri, 10 am – 6 pm',
+    langs:['English','Odia'],
+    bio:'Dr. Suresh Mohanty specialises in neonatal care, childhood vaccinations, and paediatric emergencies. He has been awarded "Best Paediatrician – Odisha 2023" by the Indian Paediatric Society.',
+  },
+  {
+    id:'d3',
+    name:'Dr. Anita Pati',
+    spec:'Gynecologist',
+    quals:['MBBS (AIIMS Bhubaneswar)', 'MS – OB/GYN', 'Fellowship – MIS'],
+    exp:15, patients:2100, rating:4.9,
+    hospital:'Mahila Arogya Hospital',
+    city:'Saheed Nagar', pin:'751007',
+    fee:500, upi:'anitapati@paytm',
+    avail:'Tue–Sun, 11 am – 7 pm',
+    langs:['English','Hindi','Odia','Bengali'],
+    bio:'Dr. Anita Pati is a senior gynaecologist with 15 years of expertise in high-risk pregnancies, laparoscopic surgery, and PCOS management. She has delivered over 3,000 babies and actively mentors junior residents.',
+  },
+];
+
+let allDoctors = [...DOCTORS];
+const queuedSet = new Set();       // doctorId → UTR
+const queuedUTRs = {};
+let activeDoctor = null;
+let profileDoctor = null;
+let currentStep = 1; // 1=pay, 2=verify, 3=done
+
+// ──────────────────────────────────────────────────────────────────────────────
+// UTILS
+// ──────────────────────────────────────────────────────────────────────────────
+function starsHtml(r) {
+  let s = '';
+  for(let i=1;i<=5;i++)
+    s+=`<svg class="w-3 h-3 ${i<=Math.round(r)?'text-amber-400':'text-slate-200'}" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>`;
+  return `<span class="flex items-center gap-0.5">${s}<span class="text-xs text-white/80 ml-1">${r}</span></span>`;
+}
+
+function starsHtmlDark(r) {
+  return starsHtml(r).replace('text-white/80','text-slate-500');
+}
+
+function buildUpiLink(doc) {
+  return `upi://pay?pa=${encodeURIComponent(doc.upi)}&pn=${encodeURIComponent(doc.name)}&am=${doc.fee}&cu=INR&tn=${encodeURIComponent('Consultation - TriageAID')}`;
+}
+
+function initials(name) {
+  return name.replace('Dr. ','').split(' ').map(w=>w[0]).join('').slice(0,2);
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// CARD RENDERING
+// ──────────────────────────────────────────────────────────────────────────────
+function cardHtml(doc) {
+  const queued = queuedSet.has(doc.id);
+  const qualPills = doc.quals.map(q=>`<span class="text-xs bg-cyan-50 text-cyan-700 border border-cyan-100 px-2 py-0.5 rounded-full font-semibold">${q}</span>`).join('');
+  return `
+    <div id="card-${doc.id}" class="doctor-card ${queued?'queued':''} bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col gap-3">
+      <!-- Top row -->
+      <div class="flex items-start gap-3">
+        <button onclick="openProfile('${doc.id}')" class="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-cyan-700 text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-sm hover:opacity-90 transition">${initials(doc.name)}</button>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-start justify-between gap-1">
+            <div>
+              <button onclick="openProfile('${doc.id}')" class="font-bold text-slate-800 text-base leading-tight hover:text-cyan-700 transition text-left">${doc.name}</button>
+              <div class="flex items-center gap-1 mt-0.5">
+                <svg class="w-3 h-3 text-cyan-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2c-4 0-7 3.1-7 7 0 5.2 7 13 7 13s7-7.8 7-13c0-3.9-3-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+                <span class="text-sm text-slate-500">${doc.spec}</span>
+              </div>
+            </div>
+            ${queued ? '<span class="shrink-0 flex items-center gap-1 text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-semibold">✓ Queue</span>' : ''}
+          </div>
+          <div class="flex items-center gap-0.5 mt-1">${starsHtmlDark(doc.rating)}</div>
+        </div>
+      </div>
+
+      <!-- Qualifications -->
+      <div class="flex flex-wrap gap-1.5">${qualPills}</div>
+
+      <!-- Experience & Hospital -->
+      <div class="flex items-center gap-3 text-xs text-slate-500">
+        <span class="flex items-center gap-1"><svg class="w-3 h-3 text-cyan-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> ${doc.exp} yrs exp.</span>
+        <span class="flex items-center gap-1"><svg class="w-3 h-3 text-cyan-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> ${doc.patients.toLocaleString()} patients</span>
+      </div>
+
+      <!-- Meta pills -->
+      <div class="flex flex-wrap gap-1.5 text-xs">
+        <span class="flex items-center gap-1 bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full">📍 ${doc.city}, ${doc.pin}</span>
+        <span class="flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full font-semibold border border-emerald-100">₹${doc.fee}</span>
+        <span class="flex items-center gap-1 bg-cyan-50 text-cyan-700 px-2.5 py-1 rounded-full">🕐 ${doc.avail}</span>
+      </div>
+
+      <!-- Buttons -->
+      <div class="flex gap-2 mt-1">
+        <button onclick="openProfile('${doc.id}')" class="flex-1 min-h-10 rounded-xl border-2 border-slate-200 text-slate-600 font-semibold text-sm hover:border-cyan-400 hover:text-cyan-700 hover:bg-cyan-50 transition-all">
+          View Profile
+        </button>
+        <button onclick="openModal('${doc.id}')" ${queued?'disabled':''} id="book-btn-${doc.id}"
+          class="btn-book flex-1 flex items-center justify-center gap-1.5 min-h-10 rounded-xl font-bold text-sm
+            ${queued?'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default':'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-100'}">
+          ${queued ? '✓ Booked' : `₹ Book &amp; Pay`}
+        </button>
+      </div>
+    </div>`;
+}
+
+function renderGrid(docs) {
+  const grid = document.getElementById('doctor-grid');
+  const noRes = document.getElementById('no-results');
+  const count = document.getElementById('result-count');
+  if (!docs.length) { grid.innerHTML=''; noRes.classList.remove('hidden'); count.textContent='No doctors found'; return; }
+  noRes.classList.add('hidden');
+  count.textContent = `${docs.length} doctor${docs.length!==1?'s':''} found`;
+  grid.innerHTML = docs.map(cardHtml).join('');
+  lucide.createIcons();
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// SEARCH
+// ──────────────────────────────────────────────────────────────────────────────
+function filterDoctors() {
+  const q = document.getElementById('search-bar').value.toLowerCase().trim();
+  document.getElementById('search-clear').classList.toggle('hidden', !q);
+  renderGrid(!q ? allDoctors : allDoctors.filter(d =>
+    d.city.toLowerCase().includes(q) || d.pin.includes(q) ||
+    d.name.toLowerCase().includes(q) || d.spec.toLowerCase().includes(q) ||
+    d.quals.some(qu=>qu.toLowerCase().includes(q)) ||
+    d.hospital.toLowerCase().includes(q)
+  ));
+}
+function clearSearch() { document.getElementById('search-bar').value=''; filterDoctors(); }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// PROFILE MODAL
+// ──────────────────────────────────────────────────────────────────────────────
+function openProfile(id) {
+  const doc = allDoctors.find(d=>d.id===id);
+  if (!doc) return;
+  profileDoctor = doc;
+  const queued = queuedSet.has(doc.id);
+
+  document.getElementById('pm-avatar').textContent = initials(doc.name);
+  document.getElementById('pm-name').textContent = doc.name;
+  document.getElementById('pm-spec').textContent = doc.spec;
+  document.getElementById('pm-fee').textContent = '₹' + doc.fee;
+  document.getElementById('pm-exp').textContent = doc.exp + '+';
+  document.getElementById('pm-patients').textContent = doc.patients >= 1000 ? (doc.patients/1000).toFixed(1)+'k' : doc.patients;
+  document.getElementById('pm-rating-big').textContent = doc.rating;
+  document.getElementById('pm-hospital').textContent = doc.hospital;
+  document.getElementById('pm-location').textContent = `${doc.city}, Bhubaneswar — ${doc.pin}`;
+  document.getElementById('pm-avail').textContent = doc.avail;
+  document.getElementById('pm-bio').textContent = doc.bio;
+  document.getElementById('pm-stars').innerHTML = starsHtml(doc.rating);
+
+  // Qualification pills
+  document.getElementById('pm-quals').innerHTML = doc.quals.map(q =>
+    `<span class="text-sm bg-cyan-50 text-cyan-800 border border-cyan-100 px-3 py-1 rounded-full font-semibold">${q}</span>`
+  ).join('');
+
+  // Language pills
+  document.getElementById('pm-langs').innerHTML = doc.langs.map(l =>
+    `<span class="text-sm bg-slate-100 text-slate-600 px-3 py-1 rounded-full font-medium">🌐 ${l}</span>`
+  ).join('');
+
+  // Book button
+  const bookBtn = document.getElementById('pm-book-btn');
+  const bookLabel = document.getElementById('pm-book-label');
+  if (queued) {
+    bookBtn.disabled = true;
+    bookBtn.className = 'w-full flex items-center justify-center gap-2 min-h-14 rounded-xl bg-emerald-50 text-emerald-700 font-bold text-base border border-emerald-200';
+    bookLabel.textContent = '✓ Already Booked';
+  } else {
+    bookBtn.disabled = false;
+    bookBtn.className = 'w-full flex items-center justify-center gap-2 min-h-14 rounded-xl bg-emerald-600 text-white font-bold text-base hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all';
+    bookLabel.textContent = `Book & Pay ₹${doc.fee}`;
+  }
+
+  document.getElementById('profile-modal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  lucide.createIcons();
+}
+
+function bookFromProfile() {
+  if (!profileDoctor) return;
+  const id = profileDoctor.id;
+  closeProfileModal();
+  setTimeout(() => openModal(id), 200);
+}
+
+function closeProfileModal() {
+  document.getElementById('profile-modal').classList.add('hidden');
+  document.body.style.overflow = '';
+  profileDoctor = null;
+}
+function handleProfileOverlay(e) { if(e.target===e.currentTarget) closeProfileModal(); }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// PAYMENT MODAL
+// ──────────────────────────────────────────────────────────────────────────────
+function openModal(id) {
+  const doc = allDoctors.find(d=>d.id===id);
+  if (!doc) return;
+  activeDoctor = doc;
+  currentStep = 1;
+  const link = buildUpiLink(doc);
+
+  document.getElementById('modal-name').textContent = doc.name;
+  document.getElementById('modal-spec').textContent = doc.spec;
+  document.getElementById('modal-fee').textContent  = '₹' + doc.fee;
+  document.getElementById('modal-upi-id').textContent = doc.upi;
+  document.getElementById('upi-deeplink').href = link;
+  document.getElementById('modal-pay-label').textContent = `Pay ₹${doc.fee} via UPI App`;
+
+  // Reset steps
+  showStep(1);
+  clearScreenshot();
+  document.getElementById('utr-input').value = '';
+  document.getElementById('utr-error').classList.add('hidden');
+
+  // QR code
+  const qrBox = document.getElementById('qr-container');
+  qrBox.innerHTML = '';
+  try {
+    new QRCode(qrBox, { text:link, width:180, height:180, colorDark:'#0f172a', colorLight:'#ffffff', correctLevel:QRCode.CorrectLevel.M });
+  } catch(e) { qrBox.innerHTML='<p class="text-xs text-slate-400 p-4">QR unavailable</p>'; }
+
+  document.getElementById('upi-modal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  lucide.createIcons();
+}
+
+function showStep(n) {
+  currentStep = n;
+  document.getElementById('step-pay').classList.toggle('hidden', n!==1);
+  document.getElementById('step-verify').classList.toggle('hidden', n!==2);
+  document.getElementById('step-done').classList.toggle('hidden', n!==3);
+
+  // Update step bar
+  const labels = {1:'Step 1: Pay',2:'Step 2: Verify',3:'Step 3: Done!'};
+  document.getElementById('step-label').textContent = labels[n];
+
+  const s2 = document.getElementById('step2-circle');
+  const s3 = document.getElementById('step3-circle');
+  const l1 = document.getElementById('step-line-1');
+  const l2 = document.getElementById('step-line-2');
+
+  if(n>=2){ s2.className='flex items-center justify-center w-6 h-6 rounded-full bg-emerald-600 text-white text-xs font-bold'; l1.classList.add('done'); } else { s2.className='flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold border-2 border-slate-300 text-slate-400'; l1.classList.remove('done'); }
+  if(n>=3){ s3.className='flex items-center justify-center w-6 h-6 rounded-full bg-emerald-600 text-white text-xs font-bold'; l2.classList.add('done'); } else { s3.className='flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold border-2 border-slate-300 text-slate-400'; l2.classList.remove('done'); }
+}
+
+function nextStepVerify() { showStep(2); lucide.createIcons(); }
+function backToPayStep()  { showStep(1); }
+
+function submitVerification() {
+  const utr = document.getElementById('utr-input').value.trim();
+  if (utr.length < 6) { document.getElementById('utr-error').classList.remove('hidden'); return; }
+  document.getElementById('utr-error').classList.add('hidden');
+
+  const doc = activeDoctor;
+  queuedSet.add(doc.id);
+  queuedUTRs[doc.id] = utr;
+
+  // Fill done screen
+  document.getElementById('done-doctor').textContent = doc.name;
+  document.getElementById('done-amount').textContent = '₹' + doc.fee;
+  document.getElementById('done-utr').textContent = utr;
+
+  showStep(3);
+  lucide.createIcons();
+
+  // Update queue badge
+  document.getElementById('queue-badge').classList.remove('hidden');
+  document.getElementById('queue-count').textContent = queuedSet.size;
+}
+
+function closeModal() {
+  document.getElementById('upi-modal').classList.add('hidden');
+  document.body.style.overflow = '';
+  if (currentStep === 3) renderGrid(allDoctors);
+  activeDoctor = null;
+}
+function handleModalOverlay(e) { if(e.target===e.currentTarget) closeModal(); }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// SCREENSHOT HELPERS
+// ──────────────────────────────────────────────────────────────────────────────
+function handleScreenshot(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('screenshot-img').src = ev.target.result;
+    document.getElementById('screenshot-preview').classList.remove('hidden');
+    document.getElementById('drop-zone').classList.add('hidden');
+    lucide.createIcons();
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearScreenshot() {
+  document.getElementById('screenshot-input').value = '';
+  document.getElementById('screenshot-preview').classList.add('hidden');
+  document.getElementById('drop-zone').classList.remove('hidden');
+}
+
+function handleDragOver(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('over'); }
+function handleDragLeave()  { document.getElementById('drop-zone').classList.remove('over'); }
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) {
+    document.getElementById('screenshot-input').files = e.dataTransfer.files;
+    handleScreenshot({ target: { files: [file] } });
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// REGISTRATION FORM
+// ──────────────────────────────────────────────────────────────────────────────
+document.getElementById('f-upi').addEventListener('input', updateUpiPreview);
+document.getElementById('f-fee').addEventListener('input', updateUpiPreview);
+document.getElementById('f-name').addEventListener('input', updateUpiPreview);
+function updateUpiPreview() {
+  const name=document.getElementById('f-name').value.trim();
+  const upi=document.getElementById('f-upi').value.trim();
+  const fee=document.getElementById('f-fee').value;
+  const show = upi.includes('@') && fee && +fee>0;
+  document.getElementById('upi-preview').classList.toggle('hidden', !show);
+  if(show) document.getElementById('upi-preview-text').textContent=`upi://pay?pa=${upi}&pn=${encodeURIComponent(name||'Doctor')}&am=${fee}&cu=INR`;
+}
+
+function handleRegister(e) {
+  e.preventDefault();
+  const name=document.getElementById('f-name').value.trim();
+  const spec=document.getElementById('f-spec').value;
+  const lic=document.getElementById('f-lic').value.trim();
+  const city=document.getElementById('f-city').value.trim();
+  const pin=document.getElementById('f-pin').value.trim();
+  const fee=document.getElementById('f-fee').value;
+  const upi=document.getElementById('f-upi').value.trim();
+  const qual=document.getElementById('f-qual').value.trim();
+  const exp=document.getElementById('f-exp').value;
+  const hosp=document.getElementById('f-hosp').value.trim();
+  const lang=document.getElementById('f-lang').value.trim();
+
+  let valid=true;
+  const show=(id,show)=>document.getElementById(id).classList.toggle('hidden',!show);
+  if(!name){show('e-name',true);valid=false;}else show('e-name',false);
+  if(!spec){show('e-spec',true);valid=false;}else show('e-spec',false);
+  if(!lic){show('e-lic',true);valid=false;}else show('e-lic',false);
+  if(!city){show('e-city',true);valid=false;}else show('e-city',false);
+  if(!/^\d{6}$/.test(pin)){show('e-pin',true);valid=false;}else show('e-pin',false);
+  if(!fee||+fee<=0){show('e-fee',true);valid=false;}else show('e-fee',false);
+  if(!upi.includes('@')){show('e-upi',true);valid=false;}else show('e-upi',false);
+  if(!valid) return;
+
+  const newDoc = {
+    id:'d'+Date.now(), name, spec,
+    quals: qual ? qual.split(',').map(q=>q.trim()).filter(Boolean) : [spec],
+    exp: +exp||0, patients:0, rating:5.0,
+    hospital: hosp||'Private Clinic',
+    city, pin, fee:+fee, upi,
+    avail:'By Appointment',
+    langs: lang ? lang.split(',').map(l=>l.trim()).filter(Boolean) : ['English'],
+    bio:'Newly registered doctor on TriageAID.',
+  };
+  allDoctors.unshift(newDoc);
+
+  document.getElementById('reg-success').classList.remove('hidden');
+  document.getElementById('reg-form').reset();
+  document.getElementById('upi-preview').classList.add('hidden');
+  lucide.createIcons();
+  setTimeout(()=>{ document.getElementById('reg-success').classList.add('hidden'); showTab('discover'); renderGrid(allDoctors); }, 2500);
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// TAB SWITCHING
+// ──────────────────────────────────────────────────────────────────────────────
+function showTab(tab) {
+  document.getElementById('view-discover').classList.toggle('hidden', tab!=='discover');
+  document.getElementById('view-register').classList.toggle('hidden', tab!=='register');
+  ['discover','register'].forEach(t=>{
+    const btn=document.getElementById('tab-'+t);
+    btn.classList.toggle('tab-active', t===tab);
+    btn.classList.toggle('text-slate-600', t!==tab);
+  });
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// INIT
+// ──────────────────────────────────────────────────────────────────────────────
+renderGrid(allDoctors);
+</script>
+</body>
+</html>

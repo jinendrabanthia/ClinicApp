@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>TriageAID — Smart Rural Health Triage | भारत</title>
+  <meta name="description" content="AI-powered patient triage for rural clinics in India. Instant urgency classification, doctor alerts, and waiting list management."/>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --blue-50:#eff6ff;--blue-100:#dbeafe;--blue-500:#3b82f6;--blue-600:#2563eb;--blue-700:#1d4ed8;
+      --indigo-100:#e0e7ff;--indigo-500:#6366f1;--indigo-600:#4f46e5;--indigo-700:#4338ca;
+      --teal-500:#14b8a6;--teal-600:#0d9488;
+      --red-100:#fee2e2;--red-500:#ef4444;--red-600:#dc2626;--red-700:#b91c1c;
+      --orange-100:#ffedd5;--orange-500:#f97316;
+      --green-100:#dcfce7;--green-500:#22c55e;--green-700:#15803d;
+      --gray-50:#f9fafb;--gray-100:#f3f4f6;--gray-200:#e5e7eb;--gray-300:#d1d5db;
+      --gray-400:#9ca3af;--gray-500:#6b7280;--gray-600:#4b5563;--gray-700:#374151;--gray-800:#1f2937;--gray-900:#111827;
+      --white:#fff;
+      --shadow-sm:0 1px 2px rgba(0,0,0,0.05);
+      --shadow:0 4px 6px -1px rgba(0,0,0,0.1),0 2px 4px -1px rgba(0,0,0,0.06);
+      --shadow-md:0 10px 15px -3px rgba(0,0,0,0.1),0 4px 6px -2px rgba(0,0,0,0.05);
+      --shadow-lg:0 20px 25px -5px rgba(0,0,0,0.1),0 10px 10px -5px rgba(0,0,0,0.04);
+      --shadow-xl:0 25px 50px -12px rgba(0,0,0,0.15);
+      --radius:1rem;--radius-xl:1.5rem;--radius-2xl:2rem;
+    }
+    html{scroll-behavior:smooth}
+    body{
+      font-family:'Inter',sans-serif;
+      background:linear-gradient(135deg,#eff6ff 0%,#e0e7ff 40%,#dbeafe 70%,#f0fdf4 100%);
+      background-attachment:fixed;
+      min-height:100vh;color:var(--gray-800);
+    }
+
+    /* ── MEDICAL PATTERN OVERLAY ── */
+    body::before{
+      content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+      background-image:
+        radial-gradient(circle at 20% 20%, rgba(59,130,246,0.06) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(99,102,241,0.06) 0%, transparent 50%),
+        radial-gradient(circle at 50% 50%, rgba(20,184,166,0.04) 0%, transparent 60%);
+    }
+    /* ECG line decoration */
+    body::after{
+      content:'';position:fixed;bottom:0;left:0;right:0;height:120px;pointer-events:none;z-index:0;
+      background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 120'%3E%3Cpolyline points='0,80 120,80 150,80 170,30 190,120 210,60 230,80 360,80 390,80 420,30 450,120 480,60 500,80 720,80 740,30 760,120 780,60 800,80 1000,80 1030,30 1060,120 1090,60 1110,80 1440,80' fill='none' stroke='rgba(59,130,246,0.12)' stroke-width='2'/%3E%3C/svg%3E") repeat-x bottom;
+    }
+
+    /* ── NAV ── */
+    nav{
+      position:sticky;top:0;z-index:200;
+      background:rgba(255,255,255,0.85);
+      backdrop-filter:blur(20px);
+      border-bottom:1px solid rgba(59,130,246,0.15);
+      box-shadow:0 1px 20px rgba(59,130,246,0.08);
+      padding:0 5%;
+    }
+    .nav-inner{
+      max-width:1200px;margin:0 auto;
+      display:flex;align-items:center;justify-content:space-between;
+      height:68px;
+    }
+    .logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+    .logo-mark{
+      width:42px;height:42px;
+      background:linear-gradient(135deg,var(--blue-600),var(--indigo-600));
+      border-radius:12px;display:flex;align-items:center;justify-content:center;
+      font-size:22px;box-shadow:0 4px 14px rgba(59,130,246,0.4);
+    }
+    .logo-text{font-family:'Poppins',sans-serif;font-size:20px;font-weight:700;color:var(--gray-900);}
+    .logo-text span{color:var(--blue-600);}
+    .nav-right{display:flex;align-items:center;gap:10px;}
+    .nav-status{
+      display:flex;align-items:center;gap:6px;
+      font-size:12px;font-weight:500;color:var(--green-700);
+      background:var(--green-100);border-radius:20px;padding:5px 12px;
+      border:1px solid rgba(34,197,94,0.3);
+    }
+    .status-dot{width:7px;height:7px;border-radius:50%;background:var(--green-500);animation:pulse-g 2s infinite;}
+    @keyframes pulse-g{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.6;transform:scale(1.4)}}
+    .btn-nav{
+      padding:9px 20px;border-radius:10px;font-size:14px;font-weight:600;
+      text-decoration:none;transition:all .2s;cursor:pointer;border:none;
+    }
+    .btn-nav-ghost{background:transparent;color:var(--blue-600);border:1.5px solid var(--blue-200);}
+    .btn-nav-ghost:hover{background:var(--blue-50);border-color:var(--blue-400);}
+    .btn-nav-solid{background:linear-gradient(135deg,var(--blue-600),var(--indigo-600));color:#fff;box-shadow:0 4px 14px rgba(59,130,246,0.35);}
+    .btn-nav-solid:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(59,130,246,0.45);}
+
+    /* ── HERO ── */
+    .hero{
+      position:relative;z-index:1;
+      max-width:1200px;margin:0 auto;
+      padding:80px 5% 60px;
+      display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;
+    }
+    .hero-left{}
+    .hero-lang-badge{
+      display:inline-flex;align-items:center;gap:8px;
+      background:linear-gradient(135deg,rgba(59,130,246,0.12),rgba(99,102,241,0.12));
+      border:1.5px solid rgba(59,130,246,0.25);
+      border-radius:30px;padding:6px 16px;
+      font-size:13px;font-weight:600;color:var(--blue-700);
+      margin-bottom:24px;
+    }
+    .hero-lang-badge .flag{font-size:16px;}
+    h1{
+      font-family:'Poppins',sans-serif;
+      font-size:clamp(32px,4.5vw,54px);
+      font-weight:800;line-height:1.1;
+      color:var(--gray-900);margin-bottom:8px;
+    }
+    .h1-hindi{
+      display:block;
+      font-family:'Poppins',sans-serif;
+      font-size:clamp(18px,2.5vw,28px);
+      font-weight:600;color:var(--blue-600);
+      margin-bottom:20px;
+    }
+    .hero-desc{
+      font-size:16px;line-height:1.8;color:var(--gray-600);
+      margin-bottom:36px;max-width:500px;
+    }
+    .hero-ctas{display:flex;flex-direction:column;gap:14px;}
+    .cta-patient{
+      display:flex;align-items:center;gap:14px;
+      background:linear-gradient(135deg,var(--blue-600),var(--indigo-600));
+      color:#fff;border-radius:var(--radius-xl);
+      padding:18px 28px;text-decoration:none;
+      box-shadow:0 8px 30px rgba(59,130,246,0.4);
+      transition:all .3s;border:none;cursor:pointer;
+    }
+    .cta-patient:hover{transform:translateY(-3px);box-shadow:0 14px 40px rgba(59,130,246,0.5);}
+    .cta-patient .cta-icon{
+      width:48px;height:48px;background:rgba(255,255,255,0.2);
+      border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;
+    }
+    .cta-label{font-family:'Poppins',sans-serif;font-size:17px;font-weight:700;}
+    .cta-sublabel{font-size:12px;opacity:0.8;margin-top:2px;}
+    .cta-doctor{
+      display:flex;align-items:center;gap:14px;
+      background:var(--white);
+      border:2px solid var(--blue-200);
+      color:var(--gray-800);border-radius:var(--radius-xl);
+      padding:18px 28px;text-decoration:none;
+      box-shadow:0 4px 20px rgba(59,130,246,0.1);
+      transition:all .3s;
+    }
+    .cta-doctor:hover{border-color:var(--blue-500);transform:translateY(-2px);box-shadow:0 8px 28px rgba(59,130,246,0.18);}
+    .cta-doctor .cta-icon{
+      width:48px;height:48px;
+      background:linear-gradient(135deg,var(--blue-50),var(--indigo-100));
+      border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;
+    }
+
+    /* ── HERO RIGHT (image) ── */
+    .hero-right{position:relative;}
+    .hero-card{
+      background:var(--white);border-radius:var(--radius-2xl);
+      box-shadow:var(--shadow-xl);overflow:hidden;
+      border:1px solid rgba(59,130,246,0.1);
+    }
+    .hero-img{width:100%;height:320px;object-fit:cover;display:block;}
+    .hero-card-footer{
+      padding:20px 24px;
+      display:flex;align-items:center;gap:12px;
+    }
+    .hero-card-badge{
+      display:inline-flex;align-items:center;gap:6px;
+      background:var(--green-100);border-radius:20px;
+      padding:5px 12px;font-size:12px;font-weight:600;color:var(--green-700);
+    }
+    .hero-card-text{font-size:13px;color:var(--gray-500);}
+
+    /* Floating stat bubble */
+    .stat-bubble{
+      position:absolute;
+      background:var(--white);border-radius:16px;
+      box-shadow:var(--shadow-lg);padding:12px 18px;
+      border:1px solid rgba(59,130,246,0.15);
+      animation:float-bubble 4s ease-in-out infinite;
+    }
+    @keyframes float-bubble{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+    .stat-bubble-1{top:-20px;right:-20px;animation-delay:0s;}
+    .stat-bubble-2{bottom:60px;left:-30px;animation-delay:2s;}
+    .sb-num{font-family:'Poppins',sans-serif;font-size:22px;font-weight:800;color:var(--blue-600);}
+    .sb-label{font-size:11px;color:var(--gray-500);white-space:nowrap;}
+
+    /* ── TRUST BAR ── */
+    .trust-bar{
+      position:relative;z-index:1;
+      background:var(--white);
+      border-top:1px solid var(--blue-100);border-bottom:1px solid var(--blue-100);
+      padding:24px 5%;
+    }
+    .trust-inner{
+      max-width:1200px;margin:0 auto;
+      display:flex;align-items:center;justify-content:center;
+      flex-wrap:wrap;gap:40px;
+    }
+    .trust-item{display:flex;align-items:center;gap:10px;}
+    .trust-icon{font-size:22px;}
+    .trust-text{font-size:14px;font-weight:500;color:var(--gray-600);}
+    .trust-text strong{color:var(--gray-900);}
+
+    /* ── HOW IT WORKS ── */
+    .section{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:80px 5%;}
+    .section-badge{
+      display:inline-flex;align-items:center;gap:8px;
+      background:rgba(59,130,246,0.1);border-radius:20px;
+      padding:5px 14px;font-size:12px;font-weight:600;color:var(--blue-600);
+      margin-bottom:14px;text-transform:uppercase;letter-spacing:1px;
+    }
+    .section-title{
+      font-family:'Poppins',sans-serif;
+      font-size:clamp(26px,3.5vw,40px);font-weight:700;
+      color:var(--gray-900);margin-bottom:12px;
+    }
+    .section-sub{font-size:16px;color:var(--gray-500);max-width:560px;line-height:1.7;margin-bottom:50px;}
+    .steps-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px;}
+    .step-card{
+      background:var(--white);border-radius:var(--radius-xl);
+      padding:32px;box-shadow:var(--shadow);
+      border:1px solid var(--blue-100);
+      transition:all .3s;position:relative;overflow:hidden;
+    }
+    .step-card::before{
+      content:'';position:absolute;top:0;left:0;right:0;height:4px;
+      background:linear-gradient(90deg,var(--blue-500),var(--indigo-500));
+      transform:scaleX(0);transform-origin:left;transition:transform .3s;
+    }
+    .step-card:hover{transform:translateY(-5px);box-shadow:var(--shadow-lg);border-color:var(--blue-300);}
+    .step-card:hover::before{transform:scaleX(1);}
+    .step-num{
+      font-family:'Poppins',sans-serif;font-size:56px;font-weight:900;
+      color:var(--blue-100);position:absolute;top:12px;right:20px;line-height:1;
+    }
+    .step-icon-wrap{
+      width:52px;height:52px;border-radius:14px;
+      display:flex;align-items:center;justify-content:center;font-size:26px;
+      margin-bottom:18px;
+    }
+    .step-icon-wrap.blue{background:linear-gradient(135deg,#dbeafe,#e0e7ff);}
+    .step-icon-wrap.orange{background:linear-gradient(135deg,#ffedd5,#fef3c7);}
+    .step-icon-wrap.red{background:linear-gradient(135deg,#fee2e2,#fce7f3);}
+    .step-icon-wrap.green{background:linear-gradient(135deg,#dcfce7,#d1fae5);}
+    .step-title{font-family:'Poppins',sans-serif;font-size:17px;font-weight:700;color:var(--gray-900);margin-bottom:10px;}
+    .step-desc{font-size:13px;color:var(--gray-500);line-height:1.7;}
+
+    /* ── TRIAGE LEVELS ── */
+    .levels-card{
+      background:var(--white);border-radius:var(--radius-2xl);
+      padding:40px;box-shadow:var(--shadow-lg);
+      border:1px solid var(--blue-100);
+      display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px;
+    }
+    .level-item{padding:24px;border-radius:var(--radius-xl);text-align:center;}
+    .level-item.critical{background:var(--red-100);border:2px solid rgba(239,68,68,0.3);}
+    .level-item.urgent{background:var(--orange-100);border:2px solid rgba(249,115,22,0.3);}
+    .level-item.routine{background:var(--green-100);border:2px solid rgba(34,197,94,0.3);}
+    .level-emoji{font-size:40px;margin-bottom:12px;display:block;}
+    .level-label{font-family:'Poppins',sans-serif;font-size:17px;font-weight:700;margin-bottom:8px;}
+    .critical .level-label{color:#b91c1c;}
+    .urgent .level-label{color:#c2410c;}
+    .routine .level-label{color:var(--green-700);}
+    .level-desc{font-size:13px;line-height:1.6;margin-bottom:12px;}
+    .critical .level-desc{color:#c93a3a;}
+    .urgent .level-desc{color:#b45309;}
+    .routine .level-desc{color:#166534;}
+    .level-action{font-size:12px;font-weight:600;padding:5px 14px;border-radius:20px;display:inline-block;}
+    .critical .level-action{background:rgba(239,68,68,0.2);color:#b91c1c;}
+    .urgent .level-action{background:rgba(249,115,22,0.2);color:#c2410c;}
+    .routine .level-action{background:rgba(34,197,94,0.2);color:var(--green-700);}
+
+    /* ── PHOTO BAND ── */
+    .photo-band{
+      position:relative;z-index:1;
+      padding:80px 5%;
+      background:linear-gradient(135deg,rgba(59,130,246,0.06),rgba(99,102,241,0.06));
+    }
+    .photo-band-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;}
+    .photo-band-img{
+      border-radius:var(--radius-2xl);overflow:hidden;
+      box-shadow:var(--shadow-xl);position:relative;
+    }
+    .photo-band-img img{width:100%;height:340px;object-fit:cover;display:block;}
+    .photo-band-img-overlay{
+      position:absolute;bottom:0;left:0;right:0;
+      background:linear-gradient(to top,rgba(30,58,138,0.85),transparent);
+      padding:28px;
+    }
+    .overlay-badge{
+      display:inline-flex;align-items:center;gap:6px;
+      background:rgba(255,255,255,0.2);backdrop-filter:blur(10px);
+      border:1px solid rgba(255,255,255,0.3);border-radius:20px;
+      padding:6px 14px;font-size:12px;font-weight:600;color:#fff;margin-bottom:8px;
+    }
+    .overlay-text{font-family:'Poppins',sans-serif;font-size:20px;font-weight:700;color:#fff;}
+    .photo-band-content .section-badge{margin-bottom:14px;}
+    .feature-list{list-style:none;display:flex;flex-direction:column;gap:14px;margin-top:28px;}
+    .feature-item{
+      display:flex;align-items:flex-start;gap:14px;
+      background:var(--white);border-radius:var(--radius);
+      padding:16px;box-shadow:var(--shadow-sm);
+      border:1px solid var(--blue-100);
+    }
+    .feature-dot{
+      width:36px;height:36px;border-radius:10px;flex-shrink:0;
+      display:flex;align-items:center;justify-content:center;font-size:18px;
+    }
+    .feature-dot.b{background:linear-gradient(135deg,#dbeafe,#e0e7ff);}
+    .feature-dot.t{background:linear-gradient(135deg,#ccfbf1,#d1fae5);}
+    .feature-dot.r{background:linear-gradient(135deg,#fee2e2,#fce7f3);}
+    .feature-info .ft{font-size:14px;font-weight:600;color:var(--gray-900);}
+    .feature-info .fs{font-size:12px;color:var(--gray-500);margin-top:2px;}
+
+    /* ── INSTRUMENTS SECTION ── */
+    .instruments-section{
+      position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:0 5% 80px;
+      display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:center;
+    }
+    .instruments-img{border-radius:var(--radius-2xl);overflow:hidden;box-shadow:var(--shadow-xl);}
+    .instruments-img img{width:100%;height:380px;object-fit:cover;display:block;}
+    .instruments-content{}
+    .ai-feature-cards{display:flex;flex-direction:column;gap:14px;margin-top:28px;}
+    .ai-card{
+      display:flex;align-items:center;gap:14px;
+      background:var(--white);border-radius:var(--radius);padding:16px 20px;
+      box-shadow:var(--shadow);border:1px solid var(--blue-100);
+      transition:all .2s;
+    }
+    .ai-card:hover{transform:translateX(5px);border-color:var(--blue-300);}
+    .ai-icon{font-size:22px;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#dbeafe,#e0e7ff);flex-shrink:0;}
+    .ai-text .at{font-size:14px;font-weight:600;color:var(--gray-900);}
+    .ai-text .as{font-size:12px;color:var(--gray-500);margin-top:2px;}
+
+    /* ── CTA BOTTOM ── */
+    .cta-bottom{
+      position:relative;z-index:1;
+      background:linear-gradient(135deg,var(--blue-600),var(--indigo-700));
+      padding:80px 5%;text-align:center;
+    }
+    .cta-bottom h2{
+      font-family:'Poppins',sans-serif;font-size:clamp(26px,4vw,42px);font-weight:800;
+      color:#fff;margin-bottom:14px;
+    }
+    .cta-bottom p{font-size:16px;color:rgba(255,255,255,0.8);margin-bottom:40px;max-width:540px;margin-left:auto;margin-right:auto;}
+    .cta-bottom-btns{display:flex;justify-content:center;flex-wrap:wrap;gap:16px;}
+    .btn-white{
+      padding:16px 36px;background:#fff;color:var(--blue-700);
+      border-radius:var(--radius-xl);font-family:'Poppins',sans-serif;
+      font-size:16px;font-weight:700;text-decoration:none;
+      box-shadow:0 8px 30px rgba(0,0,0,0.2);transition:all .3s;display:inline-block;
+    }
+    .btn-white:hover{transform:translateY(-3px);box-shadow:0 14px 40px rgba(0,0,0,0.25);}
+    .btn-outline-white{
+      padding:16px 36px;background:transparent;color:#fff;
+      border:2px solid rgba(255,255,255,0.5);
+      border-radius:var(--radius-xl);font-size:16px;font-weight:600;
+      text-decoration:none;transition:all .3s;display:inline-block;
+    }
+    .btn-outline-white:hover{background:rgba(255,255,255,0.1);border-color:#fff;}
+
+    /* ── OFFLINE INDICATOR ── */
+    #offlineBar{
+      display:none;position:fixed;top:68px;left:0;right:0;z-index:300;
+      background:#f97316;color:#fff;text-align:center;
+      padding:8px;font-size:13px;font-weight:600;
+    }
+    .online-bar{
+      display:none;position:fixed;top:68px;left:0;right:0;z-index:300;
+      background:var(--green-500);color:#fff;text-align:center;
+      padding:8px;font-size:13px;font-weight:600;
+    }
+
+    /* ── FOOTER ── */
+    footer{
+      position:relative;z-index:1;
+      background:var(--gray-900);
+      padding:40px 5%;text-align:center;
+    }
+    .footer-logo{font-family:'Poppins',sans-serif;font-size:22px;font-weight:700;color:#fff;margin-bottom:8px;}
+    .footer-logo span{color:var(--blue-400);}
+    .footer-sub{font-size:13px;color:var(--gray-400);margin-bottom:20px;}
+    .footer-links{display:flex;justify-content:center;gap:24px;flex-wrap:wrap;}
+    .footer-links a{font-size:13px;color:var(--gray-500);text-decoration:none;transition:color .2s;}
+    .footer-links a:hover{color:var(--blue-400);}
+    .footer-bottom{margin-top:24px;padding-top:20px;border-top:1px solid var(--gray-800);font-size:12px;color:var(--gray-600);}
+
+    /* ── RESPONSIVE ── */
+    @media(max-width:768px){
+      .hero{grid-template-columns:1fr;gap:40px;padding:60px 5% 40px;}
+      .hero-right{order:-1;}
+      .photo-band-inner,.instruments-section{grid-template-columns:1fr;}
+      .hero-img{height:240px;}
+      .photo-band-img img{height:260px;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- Offline indicator -->
+<div id="offlineBar">⚡ No internet connection — Data saving locally</div>
+<div id="onlineBar" class="online-bar">✅ Connected — Syncing data...</div>
+
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="logo">
+      <div class="logo-mark">🏥</div>
+      <span class="logo-text">Rapid<span>AID</span></span>
+    </a>
+    <div class="nav-right">
+      <div class="nav-status">
+        <span class="status-dot"></span>
+        System Online
+      </div>
+      <a href="/doctor-login" class="btn-nav btn-nav-ghost">Doctor Login</a>
+      <a href="/intake" class="btn-nav btn-nav-solid">Start Intake →</a>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-left">
+    <div class="hero-lang-badge">
+      <span class="flag">🇮🇳</span>
+      Rural India Health Initiative &nbsp;|&nbsp; ग्रामीण स्वास्थ्य सेवा
+    </div>
+    <h1>Smarter Triage<br/>for Rural Clinics</h1>
+    <span class="h1-hindi">हर मरीज़ की सही देखभाल, सही समय पर</span>
+    <p class="hero-desc">
+      AI-powered patient assessment that classifies urgency in seconds — helping understaffed rural clinics prioritise care, alert doctors for emergencies, and manage queues automatically.
+    </p>
+    <div class="hero-ctas">
+      <a href="/intake" class="cta-patient">
+        <div class="cta-icon">🩺</div>
+        <div>
+          <div class="cta-label">Patient Intake Form</div>
+          <div class="cta-sublabel">मरीज़ पंजीकरण — Get triaged in under 2 minutes</div>
+        </div>
+        <span style="margin-left:auto;font-size:20px;">→</span>
+      </a>
+      <a href="/doctor-login" class="cta-doctor">
+        <div class="cta-icon">👨‍⚕️</div>
+        <div>
+          <div class="cta-label" style="font-family:'Poppins',sans-serif;font-size:17px;font-weight:700;">Doctor Portal</div>
+          <div class="cta-sublabel" style="font-size:12px;color:#6b7280;margin-top:2px;">Login or Register — View your patient queue</div>
+        </div>
+        <span style="margin-left:auto;font-size:20px;color:#9ca3af;">→</span>
+      </a>
+    </div>
+  </div>
+  <div class="hero-right">
+    <div class="hero-card">
+      <img src="/hero_doctor.png" alt="Doctor in rural clinic" class="hero-img" onerror="this.style.background='linear-gradient(135deg,#dbeafe,#e0e7ff)';this.alt='';this.src='';" />
+      <div class="hero-card-footer">
+        <span class="hero-card-badge">🤖 AI Triage Active</span>
+        <span class="hero-card-text">Processing assessments in real-time</span>
+      </div>
+    </div>
+    <div class="stat-bubble stat-bubble-1">
+      <div class="sb-num">&lt;30s</div>
+      <div class="sb-label">⚡ Triage Time</div>
+    </div>
+    <div class="stat-bubble stat-bubble-2">
+      <div class="sb-num">3</div>
+      <div class="sb-label">🏷️ Priority Levels</div>
+    </div>
+  </div>
+</section>
+
+<!-- Trust Bar -->
+<div class="trust-bar">
+  <div class="trust-inner">
+    <div class="trust-item"><span class="trust-icon">🔒</span><span class="trust-text"><strong>Secure &amp; Private</strong> — Patient data protected</span></div>
+    <div class="trust-item"><span class="trust-icon">📡</span><span class="trust-text"><strong>Works Offline</strong> — Data saved locally</span></div>
+    <div class="trust-item"><span class="trust-icon">🌐</span><span class="trust-text"><strong>Bilingual</strong> — English &amp; हिंदी</span></div>
+    <div class="trust-item"><span class="trust-icon">📱</span><span class="trust-text"><strong>Mobile-First</strong> — Works on any device</span></div>
+    <div class="trust-item"><span class="trust-icon">🤖</span><span class="trust-text"><strong>Gemini AI</strong> — Medical-grade assessment</span></div>
+  </div>
+</div>
+
+<!-- How it Works -->
+<section class="section">
+  <div class="section-badge">📋 The Process</div>
+  <h2 class="section-title">From Intake to Care in 4 Simple Steps</h2>
+  <p class="section-sub">No medical expertise needed at the front desk. Our AI handles the assessment.</p>
+  <div class="steps-grid">
+    <div class="step-card">
+      <div class="step-num">01</div>
+      <div class="step-icon-wrap blue">📝</div>
+      <div class="step-title">Patient Fills Intake Form</div>
+      <div class="step-desc">Simple wizard with symptoms, age, medical history, pain scale, and location. Bilingual-friendly, touch-optimised.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">02</div>
+      <div class="step-icon-wrap orange">🤖</div>
+      <div class="step-title">AI Analyses with Severity Guide</div>
+      <div class="step-desc">Google Gemini AI cross-references a comprehensive Symptom Severity Guide to classify the case accurately.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">03</div>
+      <div class="step-icon-wrap red">🚨</div>
+      <div class="step-title">Critical Alert or Queue Assignment</div>
+      <div class="step-desc">Critical cases instantly email the nearest doctor. Routine cases get added to the clinic waiting list automatically.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">04</div>
+      <div class="step-icon-wrap green">📋</div>
+      <div class="step-title">Doctor Reviews Dashboard</div>
+      <div class="step-desc">Doctors see colour-coded queues — red for critical, yellow for urgent, green for routine. Click any patient for full AI notes.</div>
+    </div>
+  </div>
+
+  <!-- Triage levels visual -->
+  <div class="levels-card" style="margin-top:48px;">
+    <div class="level-item critical">
+      <span class="level-emoji">🚨</span>
+      <div class="level-label">CRITICAL</div>
+      <div class="level-desc">Life-threatening. Stroke, heart attack, sepsis, severe trauma. Immediate action required.</div>
+      <span class="level-action">Doctor alerted instantly</span>
+    </div>
+    <div class="level-item urgent">
+      <span class="level-emoji">⚠️</span>
+      <div class="level-label">URGENT</div>
+      <div class="level-desc">Serious condition. High fever, suspected fracture, infected wound. Same-day attention needed.</div>
+      <span class="level-action">Priority queue placement</span>
+    </div>
+    <div class="level-item routine">
+      <span class="level-emoji">✅</span>
+      <div class="level-label">ROUTINE</div>
+      <div class="level-desc">Stable. Common cold, mild fever, minor injuries. Basic care or over-the-counter treatment.</div>
+      <span class="level-action">Waiting list + ticket issued</span>
+    </div>
+  </div>
+</section>
+
+<!-- Photo Band — Clinic Team -->
+<div class="photo-band">
+  <div class="photo-band-inner">
+    <div class="photo-band-img">
+      <img src="/rural_clinic_team.png" alt="Rural clinic healthcare team" onerror="this.style.background='linear-gradient(135deg,#dbeafe,#c7d2fe)';this.src=''" />
+      <div class="photo-band-img-overlay">
+        <div class="overlay-badge">🏥 Rural Clinic</div>
+        <div class="overlay-text">Compassionate care,<br/>powered by AI</div>
+      </div>
+    </div>
+    <div class="photo-band-content">
+      <div class="section-badge">🌍 Rural-Ready</div>
+      <h2 class="section-title" style="max-width:400px;">Designed for India's Realities</h2>
+      <p style="font-size:15px;color:var(--gray-500);line-height:1.7;">Built specifically for the challenges of rural healthcare — erratic internet, overworked staff, and patients who travel hours for care.</p>
+      <ul class="feature-list">
+        <li class="feature-item">
+          <div class="feature-dot b">📡</div>
+          <div class="feature-info">
+            <div class="ft">Works with poor connectivity</div>
+            <div class="fs">Data saved locally, syncs when internet is restored</div>
+          </div>
+        </li>
+        <li class="feature-item">
+          <div class="feature-dot t">📍</div>
+          <div class="feature-info">
+            <div class="ft">Location-aware doctor routing</div>
+            <div class="fs">Pin code matching routes alerts to the nearest available doctor</div>
+          </div>
+        </li>
+        <li class="feature-item">
+          <div class="feature-dot r">🚨</div>
+          <div class="feature-info">
+            <div class="ft">Automatic emergency escalation</div>
+            <div class="fs">Critical cases trigger email alerts in under 5 seconds</div>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Instruments & AI Section -->
+<div class="instruments-section">
+  <div>
+    <div class="section-badge">🤖 AI-Powered</div>
+    <h2 class="section-title">Medical-Grade AI at the Front Desk</h2>
+    <p style="font-size:15px;color:var(--gray-500);line-height:1.7;margin-bottom:0;">Our AI doesn't just match keywords — it reasons through your patient's complete picture: age, history, medications, consciousness, and pain level.</p>
+    <div class="ai-feature-cards">
+      <div class="ai-card">
+        <div class="ai-icon">📊</div>
+        <div class="ai-text">
+          <div class="at">Symptom Severity Guide</div>
+          <div class="as">10-section medical reference covering cardiac, neurological, trauma, pediatric & more</div>
+        </div>
+      </div>
+      <div class="ai-card">
+        <div class="ai-icon">⚕️</div>
+        <div class="ai-text">
+          <div class="at">Conservative Triage Logic</div>
+          <div class="as">When uncertain, always escalates — never downgrades. Patient safety first.</div>
+        </div>
+      </div>
+      <div class="ai-card">
+        <div class="ai-icon">💊</div>
+        <div class="ai-text">
+          <div class="at">Medication &amp; Allergy Awareness</div>
+          <div class="as">Flags dangerous drug interactions and allergy risks automatically</div>
+        </div>
+      </div>
+      <div class="ai-card">
+        <div class="ai-icon">👶</div>
+        <div class="ai-text">
+          <div class="at">Paediatric &amp; Maternal Priority</div>
+          <div class="as">Children under 5 and pregnant patients are automatically upgraded in priority</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="instruments-img">
+    <img src="/medical_instruments.png" alt="Medical instruments" onerror="this.style.background='linear-gradient(135deg,#1e3a8a,#1e40af)';this.src=''"/>
+  </div>
+</div>
+
+<!-- CTA Bottom -->
+<div class="cta-bottom">
+  <h2>Ready to Transform Your Clinic?</h2>
+  <p>Join the new wave of AI-assisted rural healthcare. Start triaging patients in minutes — no technical expertise required.</p>
+  <div class="cta-bottom-btns">
+    <a href="/intake" class="btn-white">🩺 Start Patient Intake</a>
+    <a href="/doctor-login" class="btn-outline-white">👨‍⚕️ Doctor Portal</a>
+    <a href="/admin" class="btn-outline-white">📊 Admin Panel</a>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-logo">Rapid<span>AID</span></div>
+  <div class="footer-sub">Intelligent Patient Triage for Rural Clinics · Powered by Google Gemini AI</div>
+  <div class="footer-links">
+    <a href="/intake">Patient Intake</a>
+    <a href="/doctor-login">Doctor Portal</a>
+    <a href="/admin">Admin Panel</a>
+  </div>
+  <div class="footer-bottom">
+    ⚕️ TriageAID assists clinical triage — it does not replace professional medical judgement. &nbsp;|&nbsp; For emergencies, call <strong>108</strong>.
+  </div>
+</footer>
+
+<script>
+  // Offline indicator
+  function updateOnlineStatus(){
+    const offBar=document.getElementById('offlineBar');
+    const onBar=document.getElementById('onlineBar');
+    if(!navigator.onLine){
+      offBar.style.display='block';onBar.style.display='none';
+    } else {
+      offBar.style.display='none';
+    }
+  }
+  window.addEventListener('online',()=>{
+    document.getElementById('onlineBar').style.display='block';
+    setTimeout(()=>{document.getElementById('onlineBar').style.display='none';},3000);
+  });
+  window.addEventListener('offline',updateOnlineStatus);
+  updateOnlineStatus();
+</script>
+</body>
+</html>
+

@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prescription — TriageAID Rural Clinic</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Serif:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    /* ── Base Reset ─────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #f1f5f9; font-family: 'Inter', sans-serif; color: #1e293b; }
+
+    /* ── Print controls (hidden when printing) ───────────────────── */
+    .no-print { background: white; border-bottom: 1px solid #e2e8f0; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .no-print p { font-size: 13px; color: #64748b; }
+    .btn-print { display: flex; align-items: center; gap: 8px; background: #0891b2; color: white; border: none; border-radius: 10px; padding: 10px 22px; font-size: 14px; font-weight: 700; cursor: pointer; transition: background .15s; }
+    .btn-print:hover { background: #0e7490; }
+    .btn-back { display: flex; align-items: center; gap: 8px; background: #f8fafc; color: #334155; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px 20px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s; text-decoration: none; }
+    .btn-back:hover { background: #f1f5f9; }
+
+    /* ── Paper sheet ─────────────────────────────────────────────── */
+    .paper {
+      max-width: 800px; margin: 28px auto; background: white;
+      border-radius: 16px; box-shadow: 0 4px 32px rgba(0,0,0,.10);
+      overflow: hidden; padding-bottom: 40px;
+    }
+
+    /* ── Clinic Letterhead ───────────────────────────────────────── */
+    .letterhead {
+      background: linear-gradient(135deg, #0c4a6e 0%, #0891b2 100%);
+      color: white; padding: 28px 36px 22px;
+      position: relative; overflow: hidden;
+    }
+    .letterhead::after {
+      content: ''; position: absolute; right: -40px; top: -40px;
+      width: 200px; height: 200px; border-radius: 50%;
+      background: rgba(255,255,255,.06);
+    }
+    .letterhead::before {
+      content: ''; position: absolute; right: 60px; bottom: -60px;
+      width: 140px; height: 140px; border-radius: 50%;
+      background: rgba(255,255,255,.04);
+    }
+    .clinic-name { font-family: 'Noto Serif', serif; font-size: 26px; font-weight: 700; letter-spacing: -.3px; }
+    .clinic-sub  { font-size: 12px; opacity: .8; margin-top: 2px; letter-spacing: .5px; text-transform: uppercase; }
+    .clinic-meta { font-size: 12px; opacity: .75; margin-top: 10px; line-height: 1.7; }
+    .rx-badge {
+      position: absolute; right: 36px; top: 50%; transform: translateY(-50%);
+      font-family: 'Noto Serif', serif; font-size: 72px; font-weight: 700;
+      opacity: .18; letter-spacing: -4px; line-height: 1;
+    }
+
+    /* ── Triage level strip ──────────────────────────────────────── */
+    #triage-strip {
+      padding: 10px 36px; font-size: 13px; font-weight: 700;
+      display: flex; align-items: center; gap: 12px; letter-spacing: .3px;
+    }
+    .triage-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+    /* ── Body sections ───────────────────────────────────────────── */
+    .body        { padding: 0 36px; }
+    .section     { margin-top: 24px; }
+    .section-title {
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+      color: #0891b2; border-bottom: 2px solid #e0f2fe; padding-bottom: 6px; margin-bottom: 14px;
+    }
+
+    /* Patient info grid */
+    .patient-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .patient-cell { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; }
+    .patient-cell .label { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: #94a3b8; font-weight: 600; }
+    .patient-cell .value { font-size: 15px; font-weight: 700; color: #1e293b; margin-top: 2px; }
+
+    /* Vitals strip */
+    .vitals-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-top: 10px; }
+    .vital-box  { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 8px 12px; text-align: center; }
+    .vital-box .v-label { font-size: 10px; color: #0369a1; font-weight: 600; text-transform: uppercase; }
+    .vital-box .v-val   { font-size: 14px; font-weight: 800; color: #0c4a6e; margin-top: 1px; }
+
+    /* Notes */
+    .notes-box { background: #fafafa; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; font-size: 14px; line-height: 1.75; color: #334155; white-space: pre-wrap; min-height: 64px; }
+    .notes-box.empty { color: #94a3b8; font-style: italic; }
+
+    /* Medication table */
+    .rx-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    .rx-table thead th {
+      background: #0891b2; color: white; padding: 10px 14px; text-align: left;
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+    }
+    .rx-table thead th:first-child { border-radius: 8px 0 0 0; }
+    .rx-table thead th:last-child  { border-radius: 0 8px 0 0; }
+    .rx-table tbody tr { border-bottom: 1px solid #f1f5f9; }
+    .rx-table tbody tr:last-child { border-bottom: none; }
+    .rx-table tbody tr:nth-child(even) { background: #f8fafc; }
+    .rx-table tbody td { padding: 11px 14px; vertical-align: top; color: #334155; }
+    .rx-table tbody td:first-child { font-weight: 700; color: #0c4a6e; }
+    .drug-num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; background: #0891b2; color: white; font-size: 11px; font-weight: 800; border-radius: 50%; margin-right: 8px; }
+
+    /* Freq badge */
+    .freq-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #374151; }
+    .freq-icon  { font-size: 14px; }
+
+    /* Empty medications notice */
+    .empty-rx { color: #94a3b8; font-style: italic; font-size: 13px; padding: 12px 0; }
+
+    /* Advice pills */
+    .advice-list { display: flex; flex-wrap: wrap; gap: 8px; }
+    .advice-pill {
+      background: #ecfdf5; border: 1.5px solid #6ee7b7; border-radius: 999px;
+      padding: 5px 14px; font-size: 12px; font-weight: 600; color: #065f46;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .advice-pill::before { content: '✓'; color: #10b981; font-weight: 800; }
+
+    /* Footer / signatures ───────────────────────────────────────── */
+    .sig-row { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 40px; }
+    .sig-box { border-top: 1.5px dashed #cbd5e1; padding-top: 8px; }
+    .sig-label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; }
+    .sig-name  { font-size: 14px; font-weight: 700; color: #1e293b; margin-top: 4px; }
+
+    .print-footer {
+      margin-top: 28px; padding-top: 14px; border-top: 1px solid #e2e8f0;
+      text-align: center; font-size: 11px; color: #94a3b8; line-height: 1.8;
+    }
+
+    /* ── Print Media Query ───────────────────────────────────────── */
+    @media print {
+      body        { background: white !important; }
+      .no-print   { display: none !important; }
+      .paper      { box-shadow: none; border-radius: 0; margin: 0; max-width: 100%; }
+      .letterhead { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      #triage-strip { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .rx-table thead { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .advice-pill    { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .vital-box      { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Print Controls (hidden on print) ─────────────────────────────── -->
+  <div class="no-print">
+    <div style="display:flex;align-items:center;gap:16px">
+      <a href="/prescription-demo" class="btn-back">
+        ← Back to Editor
+      </a>
+      <p>Review the prescription below, then print.</p>
+    </div>
+    <button class="btn-print" onclick="window.print()">
+      🖨️ &nbsp;Print Now
+    </button>
+  </div>
+
+  <!-- ── Prescription Paper ─────────────────────────────────────────── -->
+  <div class="paper" id="prescription">
+
+    <!-- Letterhead -->
+    <div class="letterhead">
+      <div class="clinic-name">🏥 Rural Health Centre</div>
+      <div class="clinic-sub">Powered by TriageAID — Intelligent Triage System</div>
+      <div class="clinic-meta">
+        Primary Health Centre, Block Road, District HQ, Odisha — 752001<br>
+        Ph: 06752-XXXXXX &nbsp;|&nbsp; calmdoctorjr@gmail.com
+      </div>
+      <div class="rx-badge">℞</div>
+    </div>
+
+    <!-- Triage Level Strip -->
+    <div id="triage-strip" style="background:#fef3c7;color:#92400e">
+      <span class="triage-dot" style="background:#f59e0b"></span>
+      <span>Triage Level: <strong id="triage-level-txt">URGENT</strong></span>
+      <span style="margin-left:auto;font-weight:500;font-size:12px" id="gen-time"></span>
+    </div>
+
+    <!-- Body -->
+    <div class="body">
+
+      <!-- Patient Info -->
+      <div class="section">
+        <div class="section-title">Patient Information</div>
+        <div class="patient-grid">
+          <div class="patient-cell"><div class="label">Full Name</div><div class="value" id="rx-name">—</div></div>
+          <div class="patient-cell"><div class="label">Age</div><div class="value" id="rx-age">—</div></div>
+          <div class="patient-cell"><div class="label">Gender</div><div class="value" id="rx-gender">—</div></div>
+        </div>
+        <div class="vitals-row">
+          <div class="vital-box"><div class="v-label">Blood Pressure</div><div class="v-val" id="vt-bp">—</div></div>
+          <div class="vital-box"><div class="v-label">Pulse</div><div class="v-val" id="vt-pulse">—</div></div>
+          <div class="vital-box"><div class="v-label">SpO₂</div><div class="v-val" id="vt-spo2">—</div></div>
+          <div class="vital-box"><div class="v-label">Temperature</div><div class="v-val" id="vt-temp">—</div></div>
+        </div>
+      </div>
+
+      <!-- Clinical Notes -->
+      <div class="section">
+        <div class="section-title">Clinical Notes / Diagnosis</div>
+        <div class="notes-box" id="rx-notes"></div>
+      </div>
+
+      <!-- Medications -->
+      <div class="section">
+        <div class="section-title">Prescribed Medications</div>
+        <table class="rx-table" id="rx-table">
+          <thead>
+            <tr>
+              <th style="width:34%">Drug Name</th>
+              <th style="width:13%">Dosage</th>
+              <th style="width:34%">Frequency &amp; Meal Timing</th>
+              <th style="width:19%">Duration</th>
+            </tr>
+          </thead>
+          <tbody id="rx-tbody"></tbody>
+        </table>
+        <p class="empty-rx hidden" id="rx-empty">No medications prescribed.</p>
+      </div>
+
+      <!-- Lifestyle Advice -->
+      <div class="section" id="advice-section">
+        <div class="section-title">Doctor's Advice &amp; Instructions</div>
+        <div class="advice-list" id="rx-advice"></div>
+        <p class="empty-rx hidden" id="advice-empty">No specific advice noted.</p>
+      </div>
+
+      <!-- Signatures -->
+      <div class="sig-row">
+        <div class="sig-box">
+          <div class="sig-label">Patient / Guardian Signature</div>
+          <div class="sig-name" style="margin-top:28px">________________________</div>
+        </div>
+        <div class="sig-box" style="text-align:right">
+          <div class="sig-label">Attending Doctor</div>
+          <div class="sig-name" style="margin-top:28px">________________________</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:4px">Reg. No. / Stamp</div>
+        </div>
+      </div>
+
+      <!-- Print footer -->
+      <div class="print-footer">
+        This prescription was generated by <strong>TriageAID Intelligent Triage System</strong> &bull;
+        Generated: <span id="footer-time"></span><br>
+        This document is confidential and intended solely for the patient named above.
+      </div>
+
+    </div><!-- /body -->
+  </div><!-- /paper -->
+
+<script>
+  // ── Read data from sessionStorage (set by prescription-demo.html)
+  const raw = sessionStorage.getItem('rxPayload');
+  const data = raw ? JSON.parse(raw) : null;
+
+  function q(id) { return document.getElementById(id); }
+
+  if (data) {
+    // Patient
+    q('rx-name').textContent   = data.patient?.name    || '—';
+    q('rx-age').textContent    = (data.patient?.age || '—') + (data.patient?.age ? ' yrs' : '');
+    q('rx-gender').textContent = data.patient?.gender  || '—';
+
+    // Vitals
+    q('vt-bp').textContent    = data.patient?.vitals?.bp    || '—';
+    q('vt-pulse').textContent = data.patient?.vitals?.pulse || '—';
+    q('vt-spo2').textContent  = data.patient?.vitals?.spo2  || '—';
+    q('vt-temp').textContent  = data.patient?.vitals?.temp  || '—';
+
+    // Triage strip
+    const level = (data.triage?.level || 'ROUTINE').toUpperCase();
+    const triageMap = {
+      CRITICAL: { bg:'#fee2e2', color:'#991b1b', dot:'#ef4444', label:'CRITICAL' },
+      URGENT:   { bg:'#fef3c7', color:'#92400e', dot:'#f59e0b', label:'URGENT' },
+      ROUTINE:  { bg:'#d1fae5', color:'#065f46', dot:'#10b981', label:'ROUTINE' }
+    };
+    const tc = triageMap[level] || triageMap.ROUTINE;
+    const strip = q('triage-strip');
+    strip.style.background = tc.bg; strip.style.color = tc.color;
+    strip.querySelector('.triage-dot').style.background = tc.dot;
+    q('triage-level-txt').textContent = tc.label;
+
+    // Time
+    const t = data.generatedAt || new Date().toLocaleString();
+    q('gen-time').textContent = 'Generated: ' + t;
+    q('footer-time').textContent = t;
+
+    // Notes
+    const notesEl = q('rx-notes');
+    if (data.notes?.trim()) { notesEl.textContent = data.notes; }
+    else { notesEl.textContent = 'No additional clinical notes recorded.'; notesEl.classList.add('empty'); }
+
+    // Medications
+    const tbody = q('rx-tbody');
+    const meds = data.medications || [];
+    if (meds.length === 0) {
+      q('rx-empty').classList.remove('hidden');
+    } else {
+      meds.forEach((m, i) => {
+        const tr = document.createElement('tr');
+        const freqText = m.frequency || '—';
+        // Parse parts to add icons
+        const iconMap = { 'Morning':'☀️', 'Afternoon':'🌤️', 'Night':'🌙', 'Before Food':'🌿', 'After Food':'🍽️' };
+        const freqHtml = freqText.split(/[,+]/).map(p => {
+          const key = p.trim();
+          return iconMap[key] ? `<span class="freq-badge"><span class="freq-icon">${iconMap[key]}</span><span>${key}</span></span>` : `<span class="freq-badge">${key}</span>`;
+        }).join(' &nbsp;·&nbsp; ');
+
+        tr.innerHTML = `
+          <td><span class="drug-num">${i+1}</span>${m.drug || '—'}</td>
+          <td><strong>${m.dosage || '—'}</strong></td>
+          <td>${freqHtml || '—'}</td>
+          <td>${m.duration || '—'}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Advice
+    const adviceContainer = q('rx-advice');
+    const adviceList = data.advice || [];
+    if (adviceList.length === 0) {
+      q('advice-empty').classList.remove('hidden');
+    } else {
+      adviceList.forEach(a => {
+        const pill = document.createElement('span');
+        pill.className = 'advice-pill'; pill.textContent = a;
+        adviceContainer.appendChild(pill);
+      });
+    }
+  } else {
+    // No session data — show demo content
+    q('rx-name').textContent   = 'Demo Patient';
+    q('rx-age').textContent    = '45 yrs';
+    q('rx-gender').textContent = 'Male';
+    q('vt-bp').textContent     = '120/80 mmHg';
+    q('vt-pulse').textContent  = '78 bpm';
+    q('vt-spo2').textContent   = '98%';
+    q('vt-temp').textContent   = '37.0°C';
+    q('rx-notes').textContent  = 'Patient presents with mild fever and headache for 2 days. No red flags. Alert and oriented.';
+    q('footer-time').textContent = new Date().toLocaleString();
+    q('gen-time').textContent  = 'Generated: ' + new Date().toLocaleString();
+    const demoMeds = [
+      { drug:'Paracetamol', dosage:'500mg', frequency:'Morning + Night, After Food', duration:'5 Days' },
+      { drug:'ORS Sachet',  dosage:'1 sachet', frequency:'Morning + Afternoon + Night, After Food', duration:'3 Days' }
+    ];
+    demoMeds.forEach((m,i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td><span class="drug-num">${i+1}</span>${m.drug}</td><td><strong>${m.dosage}</strong></td><td>${m.frequency}</td><td>${m.duration}</td>`;
+      q('rx-tbody').appendChild(tr);
+    });
+    ['Increase Hydration','Strict Bed Rest','Review after 3 Days'].forEach(a => {
+      const pill = document.createElement('span');
+      pill.className = 'advice-pill'; pill.textContent = a;
+      q('rx-advice').appendChild(pill);
+    });
+  }
+</script>
+</body>
+</html>
