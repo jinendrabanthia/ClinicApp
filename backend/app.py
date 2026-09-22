@@ -23,39 +23,39 @@ CORS(app)
 
 @app.route("/")
 def index():
-    return send_from_directory("static", "index.html")
+    return send_from_directory(app.static_folder, "index.html")
 
 @app.route("/intake")
 def intake():
-    return send_from_directory("static", "intake.html")
+    return send_from_directory(app.static_folder, "intake.html")
 
 @app.route("/results")
 def results():
-    return send_from_directory("static", "results.html")
+    return send_from_directory(app.static_folder, "results.html")
 
 @app.route("/admin")
 def admin():
-    return send_from_directory("static", "admin.html")
+    return send_from_directory(app.static_folder, "admin.html")
 
 @app.route("/doctor-login")
 def doctor_login():
-    return send_from_directory("static", "doctor-login.html")
+    return send_from_directory(app.static_folder, "doctor-login.html")
 
 @app.route("/doctor-dashboard")
 def doctor_dashboard():
-    return send_from_directory("static", "doctor-dashboard.html")
+    return send_from_directory(app.static_folder, "doctor-dashboard.html")
 
 @app.route("/prescription-demo")
 def prescription_demo():
-    return send_from_directory("static", "prescription-demo.html")
+    return send_from_directory(app.static_folder, "prescription-demo.html")
 
 @app.route("/prescription-print")
 def prescription_print():
-    return send_from_directory("static", "prescription-print.html")
+    return send_from_directory(app.static_folder, "prescription-print.html")
 
 @app.route("/doctor-discovery")
 def doctor_discovery():
-    return send_from_directory("static", "doctor-discovery.html")
+    return send_from_directory(app.static_folder, "doctor-discovery.html")
 
 
 # ─── API Routes ──────────────────────────────────────────────────────────────
@@ -206,7 +206,7 @@ def health():
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("  🏥  TriageAID — Rural Clinic Triage System")
+    print("  [+]  TriageAID - Rural Clinic Triage System")
     print("=" * 60)
     print(f"  Running at: http://localhost:5000")
     print(f"  Admin Panel: http://localhost:5000/admin")
