@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Triage Results | TriageAID</title>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
@@ -27,7 +27,7 @@
     }
     .back-a{display:flex;align-items:center;gap:7px;color:var(--muted);text-decoration:none;font-size:14px;transition:color .2s}
     .back-a:hover{color:var(--blue)}
-    .logo{display:flex;align-items:center;gap:10px;font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--ink)}
+    .logo{display:flex;align-items:center;gap:10px;font-family:'Outfit',sans-serif;font-size:17px;font-weight:800;color:var(--ink)}
     .logo span{color:var(--blue)}
     .logo-icon{width:34px;height:34px;background:linear-gradient(135deg,#4361ee,#7b2d8b);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 4px 12px rgba(67,97,238,.3)}
 
@@ -86,7 +86,7 @@
     .lv-badge{
       display:inline-flex;align-items:center;gap:9px;
       padding:8px 24px;border-radius:40px;
-      font-family:'Syne',sans-serif;font-size:18px;font-weight:800;letter-spacing:2px;
+      font-family:'Outfit',sans-serif;font-size:18px;font-weight:800;letter-spacing:2px;
       margin-bottom:14px;position:relative;z-index:2;
     }
     .critical .lv-badge{background:rgba(232,53,53,.1);border:2px solid rgba(232,53,53,.4);color:#dc2626}
@@ -98,7 +98,7 @@
     .routine  .lv-dot{background:#22c55e;box-shadow:0 0 8px rgba(34,197,94,.8)}
     @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
 
-    .res-headline{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--ink);margin-bottom:6px;position:relative;z-index:2}
+    .res-headline{font-family:'Outfit',sans-serif;font-size:22px;font-weight:800;color:var(--ink);margin-bottom:6px;position:relative;z-index:2}
     .res-subline{font-size:14px;color:var(--muted);position:relative;z-index:2;max-width:480px;margin:0 auto}
     .urgency-note{font-size:14px;font-weight:600;margin-top:12px;position:relative;z-index:2}
     .critical .urgency-note{color:#dc2626}.urgent .urgency-note{color:#ea580c}.routine .urgency-note{color:#16a34a}
@@ -113,7 +113,7 @@
     }
     .metric:hover{transform:translateY(-4px)}
     .ml{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:8px;font-weight:600}
-    .mv{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--ink)}
+    .mv{font-family:'Outfit',sans-serif;font-size:26px;font-weight:800;color:var(--ink)}
     .bar{width:100%;height:7px;background:#e8eaff;border-radius:4px;margin-top:8px;overflow:hidden}
     .bar-fill{height:100%;border-radius:4px;animation:barGrow .8s .4s ease both}
     .esc-badge{display:inline-flex;align-items:center;gap:5px;background:#fefce8;border:1px solid #fcd34d;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:#92400e;margin-top:6px}
@@ -126,7 +126,7 @@
       animation:fadeSlideUp .5s .3s both;
     }
     .ticket-lbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px}
-    .ticket-num{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;color:#0891b2;letter-spacing:4px}
+    .ticket-num{font-family:'Outfit',sans-serif;font-size:36px;font-weight:800;color:#0891b2;letter-spacing:4px}
 
     /* ALERT BOX */
     .alert-b{
@@ -137,7 +137,7 @@
     .alert-b.ok{background:#f0fdf4;border:1px solid rgba(34,197,94,.25)}
     .alert-b.warn{background:#fff7ed;border:1px solid rgba(249,115,22,.25)}
     .alert-ico{font-size:24px;flex-shrink:0}
-    .alert-t{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:3px}
+    .alert-t{font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;margin-bottom:3px}
     .alert-t.gr{color:#16a34a}.alert-t.or{color:#ea580c}
     .alert-d{font-size:13px;color:var(--muted);line-height:1.6}
 
@@ -150,7 +150,7 @@
       transition:box-shadow .3s;
     }
     .ic:hover{box-shadow:0 6px 24px rgba(67,97,238,.08)}
-    .ic-t{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--blue);margin-bottom:12px}
+    .ic-t{font-family:'Outfit',sans-serif;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--blue);margin-bottom:12px}
     .ic-body{font-size:14px;color:var(--ink2);line-height:1.85}
 
     /* RISK FACTORS */
@@ -173,7 +173,7 @@
       box-shadow:0 2px 8px rgba(67,97,238,.06);
       animation:fadeSlideUp .5s .5s both;
     }
-    .ntitle{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+    .ntitle{font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px}
     .nsub{font-size:12px;color:var(--muted);margin-bottom:18px}
     .ntabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
     .ntab{
@@ -194,7 +194,7 @@
     .btn-notif{
       width:100%;padding:12px;background:linear-gradient(135deg,var(--blue),var(--purple));
       border:none;border-radius:var(--r12);color:#fff;
-      font-family:'Syne',sans-serif;font-weight:700;font-size:14px;cursor:pointer;
+      font-family:'Outfit',sans-serif;font-weight:700;font-size:14px;cursor:pointer;
       transition:all .3s cubic-bezier(.34,1.56,.64,1);margin-top:4px;
     }
     .btn-notif:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(67,97,238,.3)}
@@ -207,7 +207,7 @@
       flex:1;min-width:160px;display:flex;align-items:center;justify-content:center;gap:8px;
       padding:14px 24px;background:linear-gradient(135deg,var(--blue),var(--purple));
       border:none;border-radius:var(--r16);color:#fff;
-      font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;
+      font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;cursor:pointer;
       text-decoration:none;transition:all .3s cubic-bezier(.34,1.56,.64,1);
       box-shadow:0 6px 20px rgba(67,97,238,.3);
     }
@@ -259,9 +259,9 @@
     document.getElementById('mainContent').innerHTML = `
       <div style="text-align:center;padding:80px 24px">
         <div style="font-size:60px;margin-bottom:20px">⚠️</div>
-        <h2 style="font-family:'Syne',sans-serif;font-size:24px;margin-bottom:12px">No result found</h2>
+        <h2 style="font-family:'Outfit',sans-serif;font-size:24px;margin-bottom:12px">No result found</h2>
         <p style="color:#8a8aa0;margin-bottom:28px">Please complete the patient intake form first.</p>
-        <a href="/intake" style="display:inline-flex;align-items:center;gap:10px;padding:14px 32px;background:linear-gradient(135deg,#4361ee,#7b2d8b);border-radius:14px;color:#fff;font-family:'Syne',sans-serif;font-size:16px;font-weight:700;text-decoration:none">Start Intake →</a>
+        <a href="/intake" style="display:inline-flex;align-items:center;gap:10px;padding:14px 32px;background:linear-gradient(135deg,#4361ee,#7b2d8b);border-radius:14px;color:#fff;font-family:'Outfit',sans-serif;font-size:16px;font-weight:700;text-decoration:none">Start Intake →</a>
       </div>`;
   } else {
     const data    = JSON.parse(raw);
