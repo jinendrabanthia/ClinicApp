@@ -365,41 +365,102 @@
 </nav>
 
 <div class="layout">
-  <!-- Stats -->
-  <div class="stats-row">
-    <div class="stat-card s-total"><div class="stat-icon">👥</div><div class="stat-num" id="stTotal">—</div><div class="stat-lbl">Total Today</div></div>
-    <div class="stat-card s-critical"><div class="stat-icon">🚨</div><div class="stat-num" id="stCrit">—</div><div class="stat-lbl">Critical</div></div>
-    <div class="stat-card s-urgent"><div class="stat-icon">⚠️</div><div class="stat-num" id="stUrg">—</div><div class="stat-lbl">Urgent</div></div>
-    <div class="stat-card s-routine"><div class="stat-icon">✅</div><div class="stat-num" id="stRout">—</div><div class="stat-lbl">Routine</div></div>
-    <div class="stat-card s-done"><div class="stat-icon">🏁</div><div class="stat-num" id="stDone">—</div><div class="stat-lbl">Completed</div></div>
+  <!-- View Selector Tabs -->
+  <div style="display:flex;gap:12px;margin-bottom:20px;border-bottom:2px solid var(--slate-200);padding-bottom:14px;flex-wrap:wrap;">
+    <button id="viewTabToday" onclick="switchMainView('today')" style="padding:11px 22px;border:none;border-radius:12px;font-family:'Poppins',sans-serif;font-size:14px;font-weight:700;cursor:pointer;background:var(--cyan-600);color:#fff;display:flex;align-items:center;gap:8px;box-shadow:var(--sha-sm);transition:all .2s;">
+      <span>🩺 Today's Active Queue</span>
+      <span id="badgeTodayCount" style="background:rgba(255,255,255,0.25);padding:2px 9px;border-radius:10px;font-size:12px;">0</span>
+    </button>
+    <button id="viewTabArchive" onclick="switchMainView('archive')" style="padding:11px 22px;border:none;border-radius:12px;font-family:'Poppins',sans-serif;font-size:14px;font-weight:700;cursor:pointer;background:var(--slate-100);color:var(--slate-600);display:flex;align-items:center;gap:8px;transition:all .2s;">
+      <span>📜 Patient History &amp; Prescriptions Archive</span>
+      <span id="badgeArchiveCount" style="background:var(--slate-200);color:var(--slate-700);padding:2px 9px;border-radius:10px;font-size:12px;">0</span>
+    </button>
   </div>
 
-  <!-- Toolbar -->
-  <div class="toolbar">
-    <div class="toolbar-left">
-      <div class="sync-badge">🔄 Auto-refresh every 30s</div>
-      <span id="lastUpdated" style="font-size:12px;color:#94a3b8;">—</span>
+  <!-- TODAY'S QUEUE VIEW -->
+  <div id="todayView">
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card s-total"><div class="stat-icon">👥</div><div class="stat-num" id="stTotal">—</div><div class="stat-lbl">Total Today</div></div>
+      <div class="stat-card s-critical"><div class="stat-icon">🚨</div><div class="stat-num" id="stCrit">—</div><div class="stat-lbl">Critical</div></div>
+      <div class="stat-card s-urgent"><div class="stat-icon">⚠️</div><div class="stat-num" id="stUrg">—</div><div class="stat-lbl">Urgent</div></div>
+      <div class="stat-card s-routine"><div class="stat-icon">✅</div><div class="stat-num" id="stRout">—</div><div class="stat-lbl">Routine</div></div>
+      <div class="stat-card s-done"><div class="stat-icon">🏁</div><div class="stat-num" id="stDone">—</div><div class="stat-lbl">Completed</div></div>
     </div>
-    <button class="refresh-btn" onclick="loadData()">↻ Refresh Now</button>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <div class="sync-badge">🔄 Daily Queue Active · Auto-refreshes every 30s</div>
+        <span id="lastUpdated" style="font-size:12px;color:#94a3b8;">—</span>
+      </div>
+      <button class="refresh-btn" onclick="loadData()">↻ Refresh Now</button>
+    </div>
+
+    <!-- 4-column queues -->
+    <div class="queues">
+      <div class="q-panel">
+        <div class="q-hdr qh-critical"><div class="qh-info"><div class="qt">🚨 CRITICAL</div><div class="qs">Immediate attention</div></div><span class="qh-cnt" id="cntCrit">0</span></div>
+        <div class="q-body" id="qCrit"></div>
+      </div>
+      <div class="q-panel">
+        <div class="q-hdr qh-urgent"><div class="qh-info"><div class="qt">⚠️ URGENT</div><div class="qs">Same-day care</div></div><span class="qh-cnt" id="cntUrg">0</span></div>
+        <div class="q-body" id="qUrg"></div>
+      </div>
+      <div class="q-panel">
+        <div class="q-hdr qh-routine"><div class="qh-info"><div class="qt">📋 ROUTINE</div><div class="qs">Stable queue</div></div><span class="qh-cnt" id="cntRout">0</span></div>
+        <div class="q-body" id="qRout"></div>
+      </div>
+      <div class="q-panel">
+        <div class="q-hdr qh-done"><div class="qh-info"><div class="qt">🏁 COMPLETED</div><div class="qs">Treated patients</div></div><span class="qh-cnt" id="cntDone">0</span></div>
+        <div class="q-body" id="qDone"></div>
+      </div>
+    </div>
   </div>
 
-  <!-- 4-column queues -->
-  <div class="queues">
-    <div class="q-panel">
-      <div class="q-hdr qh-critical"><div class="qh-info"><div class="qt">🚨 CRITICAL</div><div class="qs">Immediate attention</div></div><span class="qh-cnt" id="cntCrit">0</span></div>
-      <div class="q-body" id="qCrit"></div>
-    </div>
-    <div class="q-panel">
-      <div class="q-hdr qh-urgent"><div class="qh-info"><div class="qt">⚠️ URGENT</div><div class="qs">Same-day care</div></div><span class="qh-cnt" id="cntUrg">0</span></div>
-      <div class="q-body" id="qUrg"></div>
-    </div>
-    <div class="q-panel">
-      <div class="q-hdr qh-routine"><div class="qh-info"><div class="qt">📋 ROUTINE</div><div class="qs">Stable queue</div></div><span class="qh-cnt" id="cntRout">0</span></div>
-      <div class="q-body" id="qRout"></div>
-    </div>
-    <div class="q-panel">
-      <div class="q-hdr qh-done"><div class="qh-info"><div class="qt">🏁 COMPLETED</div><div class="qs">Treated patients</div></div><span class="qh-cnt" id="cntDone">0</span></div>
-      <div class="q-body" id="qDone"></div>
+  <!-- PATIENT HISTORY & ARCHIVES VIEW (Hidden by default) -->
+  <div id="archiveView" style="display:none;">
+    <div style="background:var(--white);border-radius:18px;padding:24px;box-shadow:var(--sha);border:1px solid var(--slate-200);margin-bottom:24px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px;">
+        <div>
+          <h2 style="font-family:'Poppins',sans-serif;font-size:20px;font-weight:700;color:var(--slate-900);">📜 Complete Patient Medical Archives</h2>
+          <p style="font-size:13px;color:var(--slate-500);margin-top:2px;">Search and inspect older patient records, triage assessments, and prescribed medicines</p>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <label style="font-size:12px;font-weight:600;color:var(--slate-600);">Filter Date:</label>
+          <input type="date" id="archiveDateFilter" onchange="renderArchiveView()" style="padding:8px 12px;border:1.5px solid var(--slate-200);border-radius:10px;font-size:13px;outline:none;background:#fff;" />
+          <button onclick="document.getElementById('archiveDateFilter').value='';renderArchiveView();" style="padding:8px 14px;background:var(--slate-100);border:1px solid var(--slate-200);border-radius:10px;font-size:12px;font-weight:600;color:var(--slate-600);cursor:pointer;">Clear Date Filter</button>
+        </div>
+      </div>
+      
+      <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+        <input type="text" id="archiveSearch" placeholder="🔍 Search by patient name, ticket #, symptoms, or prescribed medicine..." oninput="renderArchiveView()" style="flex:1;min-width:260px;padding:12px 16px;border:1.5px solid var(--slate-200);border-radius:12px;font-size:14px;outline:none;" />
+        <select id="archiveLevelFilter" onchange="renderArchiveView()" style="padding:12px 16px;border:1.5px solid var(--slate-200);border-radius:12px;font-size:13px;outline:none;background:#fff;cursor:pointer;font-weight:600;">
+          <option value="ALL">All Triage Levels</option>
+          <option value="CRITICAL">🔴 Critical</option>
+          <option value="URGENT">🟠 Urgent</option>
+          <option value="ROUTINE">🟢 Routine</option>
+        </select>
+      </div>
+
+      <div style="overflow-x:auto;border-radius:14px;border:1px solid var(--slate-200);">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead style="background:var(--slate-800);color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.6px;">
+            <tr>
+              <th style="padding:14px 16px;text-align:left;">Ticket #</th>
+              <th style="padding:14px 16px;text-align:left;">Date &amp; Time</th>
+              <th style="padding:14px 16px;text-align:left;">Patient Name</th>
+              <th style="padding:14px 16px;text-align:left;">Chief Complaint</th>
+              <th style="padding:14px 16px;text-align:left;">Triage Level</th>
+              <th style="padding:14px 16px;text-align:left;">Medicines Prescribed</th>
+              <th style="padding:14px 16px;text-align:center;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="archiveTbody">
+            <!-- populated by JS -->
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>
@@ -511,18 +572,30 @@
 <script>
   /* ── State ── */
   let allPatients = [];
+  let rawHistory = [];
   let completedPatients = JSON.parse(localStorage.getItem('completedPatients') || '[]');
   let rxStore = JSON.parse(localStorage.getItem('rxStore') || '{}'); // ticket -> {rows, advice}
   let currentPatientIdx = null;
   let rxRowCount = 0;
+  let activeMainView = 'today';
 
-  /* ── Auth ── */
-  const stored = sessionStorage.getItem('loggedDoctor');
-  if (!stored) { window.location.href = '/doctor-login'; }
-  const doc = JSON.parse(stored || '{}');
-  document.getElementById('docNm').textContent = doc.name || 'Doctor';
-  document.getElementById('docSp').textContent = doc.specialization || 'General Physician';
-  document.getElementById('docAv').textContent = (doc.name||'D').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  /* ── Auth Guard ── */
+  let doc = null;
+  try {
+    const stored = sessionStorage.getItem('loggedDoctor');
+    if (!stored) { window.location.href = '/doctor-login'; }
+    doc = JSON.parse(stored || '{}');
+    if (!doc || doc.id !== 'admin') {
+      sessionStorage.removeItem('loggedDoctor');
+      window.location.href = '/doctor-login';
+    }
+  } catch(e) {
+    sessionStorage.removeItem('loggedDoctor');
+    window.location.href = '/doctor-login';
+  }
+  document.getElementById('docNm').textContent = doc ? (doc.name || 'Dr. Admin') : 'Dr. Admin';
+  document.getElementById('docSp').textContent = doc ? (doc.specialization || 'Chief Medical Officer') : 'Chief Medical Officer';
+  document.getElementById('docAv').textContent = 'AD';
   function logout(){ sessionStorage.removeItem('loggedDoctor'); window.location.href='/doctor-login'; }
 
   /* ── Connectivity ── */
@@ -532,34 +605,116 @@
   }
   window.addEventListener('online', updateConn); window.addEventListener('offline', updateConn); updateConn();
 
-  /* ── Data Loading ── */
+  /* ── Date Helpers ── */
+  function getTodayFormats(){
+    const now = new Date();
+    const dd = String(now.getDate()).padStart(2, '0');
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const yyyy = now.getFullYear();
+    return {
+      d1: `${dd}-${mm}-${yyyy}`,
+      d2: `${dd}/${mm}/${yyyy}`,
+      d3: `${yyyy}-${mm}-${dd}`
+    };
+  }
+
+  function isToday(dateStr){
+    if(!dateStr) return true; // Default to today if omitted
+    const t = getTodayFormats();
+    const s = String(dateStr).trim();
+    return s.includes(t.d1) || s.includes(t.d2) || s.includes(t.d3);
+  }
+
+  function switchMainView(view){
+    activeMainView = view;
+    const tabToday = document.getElementById('viewTabToday');
+    const tabArchive = document.getElementById('viewTabArchive');
+    const viewToday = document.getElementById('todayView');
+    const viewArchive = document.getElementById('archiveView');
+
+    if(view === 'today'){
+      viewToday.style.display = 'block';
+      viewArchive.style.display = 'none';
+      tabToday.style.background = 'var(--cyan-600)';
+      tabToday.style.color = '#fff';
+      tabArchive.style.background = 'var(--slate-100)';
+      tabArchive.style.color = 'var(--slate-600)';
+    } else {
+      viewToday.style.display = 'none';
+      viewArchive.style.display = 'block';
+      tabArchive.style.background = 'var(--cyan-600)';
+      tabArchive.style.color = '#fff';
+      tabToday.style.background = 'var(--slate-100)';
+      tabToday.style.color = 'var(--slate-600)';
+      renderArchiveView();
+    }
+  }
+
+  /* ── Data Loading & Sync ── */
   async function loadData(){
     try{
-      const res = await fetch('/api/waiting-list');
+      const res = await fetch('/api/patient-history');
       const data = await res.json();
+      rawHistory = data.history || data.rows || [];
+
+      // Sync prescriptions from DB into local rxStore
+      rawHistory.forEach(item => {
+        const ticket = item['Ticket No.'];
+        if(ticket && item.prescription){
+          rxStore[ticket] = {
+            rows: item.prescription.medicines || [],
+            advice: item.prescription.advice || ''
+          };
+        }
+      });
+      localStorage.setItem('rxStore', JSON.stringify(rxStore));
+
       const doneTickets = completedPatients.map(p => p['Ticket No.']);
-      allPatients = (data.rows || []).filter(p => !doneTickets.includes(p['Ticket No.']));
+      
+      // Filter today's active waiting queue (only today's patients who are not done)
+      allPatients = rawHistory.filter(p => isToday(p['Date']) && !doneTickets.includes(p['Ticket No.']));
+
+      // Filter today's completed patients
+      const todayCompleted = completedPatients.filter(p => isToday(p.completedAt || p['Date']));
+
+      // Update Top Nav Badges
+      document.getElementById('badgeTodayCount').textContent = allPatients.length + todayCompleted.length;
+      document.getElementById('badgeArchiveCount').textContent = rawHistory.length;
+
       renderQueues();
+      if(activeMainView === 'archive') renderArchiveView();
       document.getElementById('lastUpdated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
-    } catch(e){ console.error(e); }
+    } catch(e){
+      console.error(e);
+      // Fallback load
+      try {
+        const res = await fetch('/api/waiting-list');
+        const data = await res.json();
+        rawHistory = data.rows || [];
+        const doneTickets = completedPatients.map(p => p['Ticket No.']);
+        allPatients = rawHistory.filter(p => isToday(p['Date']) && !doneTickets.includes(p['Ticket No.']));
+        renderQueues();
+      } catch(err){ console.error(err); }
+    }
   }
 
   function renderQueues(){
+    const todayCompleted = completedPatients.filter(p => isToday(p.completedAt || p['Date']));
     const crit = allPatients.filter(p=>p['Triage Level']==='CRITICAL');
     const urg  = allPatients.filter(p=>p['Triage Level']==='URGENT');
     const rout = allPatients.filter(p=>p['Triage Level']==='ROUTINE');
-    const done = completedPatients;
+    const done = todayCompleted;
 
     ['stTotal','stCrit','stUrg','stRout','stDone'].forEach((id,i)=>{
-      document.getElementById(id).textContent = [allPatients.length+done.length, crit.length, urg.length, rout.length, done.length][i];
+      document.getElementById(id).textContent = [allPatients.length + done.length, crit.length, urg.length, rout.length, done.length][i];
     });
     ['cntCrit','cntUrg','cntRout','cntDone'].forEach((id,i)=>{
       document.getElementById(id).textContent = [crit.length, urg.length, rout.length, done.length][i];
     });
 
-    renderQ('qCrit', crit, 'critical', {icon:'✅', txt:'No critical cases'});
-    renderQ('qUrg',  urg,  'urgent',   {icon:'👍', txt:'No urgent cases'});
-    renderQ('qRout', rout, 'routine',  {icon:'🌟', txt:'Waiting list is clear'});
+    renderQ('qCrit', crit, 'critical', {icon:'✅', txt:'No critical cases today'});
+    renderQ('qUrg',  urg,  'urgent',   {icon:'👍', txt:'No urgent cases today'});
+    renderQ('qRout', rout, 'routine',  {icon:'🌟', txt:'Today\'s queue is clear'});
     renderQDone('qDone', done);
   }
 
@@ -581,14 +736,120 @@
 
   function renderQDone(id, rows){
     const el = document.getElementById(id);
-    if(!rows.length){ el.innerHTML=`<div class="empty-q"><div class="eq-ico">🏁</div><div class="eq-txt">No completed cases yet</div></div>`; return; }
+    if(!rows.length){ el.innerHTML=`<div class="empty-q"><div class="eq-ico">🏁</div><div class="eq-txt">No completed cases today</div></div>`; return; }
     el.innerHTML = rows.map((p,i)=>`
       <div class="p-card done" onclick="openCompletedModal(${i})">
         <div class="pc-top"><span class="pc-nm">${p['Patient Name']||'—'}</span><span class="pc-tk" style="color:#6366f1;">✅ Treated</span></div>
         <div class="pc-meta"><span>👤 ${p['Age']||'?'}y ${p['Gender']||''}</span></div>
         <div class="pc-chief">💊 ${(rxStore[p['Ticket No.']]?.rows || []).length} medicine(s) prescribed</div>
-        <div class="pc-time" style="color:#6366f1;">🏁 ${p.completedAt || ''}</div>
+        <div class="pc-time" style="color:#6366f1;">🏁 ${p.completedAt || p['Date'] || ''}</div>
       </div>`).join('');
+  }
+
+  /* ── Patient History & Archives View ── */
+  function renderArchiveView(){
+    const tbody = document.getElementById('archiveTbody');
+    if(!tbody) return;
+
+    const search = (document.getElementById('archiveSearch')?.value || '').toLowerCase().trim();
+    const dateFilter = document.getElementById('archiveDateFilter')?.value; // YYYY-MM-DD
+    const levelFilter = document.getElementById('archiveLevelFilter')?.value || 'ALL';
+
+    // Format YYYY-MM-DD to DD-MM-YYYY for matching
+    let targetDateStr = '';
+    if(dateFilter){
+      const parts = dateFilter.split('-');
+      if(parts.length === 3) targetDateStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+
+    let filtered = rawHistory.filter(p => {
+      // Level filter
+      if(levelFilter !== 'ALL' && (p['Triage Level'] || 'ROUTINE') !== levelFilter) return false;
+      
+      // Date filter
+      if(targetDateStr && !(p['Date'] || '').includes(targetDateStr)) return false;
+
+      // Search query filter
+      if(search){
+        const ticket = (p['Ticket No.'] || '').toLowerCase();
+        const name = (p['Patient Name'] || '').toLowerCase();
+        const complaint = (p['Chief Complaint'] || '').toLowerCase();
+        const phone = (p['Phone'] || '').toLowerCase();
+        const rxData = rxStore[p['Ticket No.']] || {};
+        const rxMeds = (rxData.rows || []).map(r => r.med || '').join(' ').toLowerCase();
+
+        return ticket.includes(search) || name.includes(search) || complaint.includes(search) || phone.includes(search) || rxMeds.includes(search);
+      }
+
+      return true;
+    });
+
+    if(!filtered.length){
+      tbody.innerHTML = `<tr><td colspan="7" style="padding:40px;text-align:center;color:var(--slate-400);">
+        <div style="font-size:32px;margin-bottom:8px;">📂</div>
+        <div style="font-weight:600;font-size:15px;color:var(--slate-700);">No matching patient records found</div>
+        <div style="font-size:12px;">Try clearing filters or changing search keywords</div>
+      </td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(p => {
+      const ticket = p['Ticket No.'] || '—';
+      const level = p['Triage Level'] || 'ROUTINE';
+      const rx = rxStore[ticket] || (p.prescription ? { rows: p.prescription.medicines, advice: p.prescription.advice } : null);
+      const medsCount = rx?.rows?.length || 0;
+      const medsBadge = medsCount > 0 
+        ? `<span style="background:var(--cyan-50);color:var(--cyan-700);border:1px solid var(--cyan-100);padding:3px 9px;border-radius:12px;font-size:11px;font-weight:600;">💊 ${medsCount} med(s) prescribed</span>`
+        : `<span style="background:var(--slate-100);color:var(--slate-500);padding:3px 9px;border-radius:12px;font-size:11px;">No Prescription</span>`;
+
+      const levelColor = level === 'CRITICAL' ? 'background:var(--red-100);color:var(--red-700);'
+        : level === 'URGENT' ? 'background:var(--orange-100);color:var(--orange-700);'
+        : 'background:var(--green-100);color:var(--green-700);';
+
+      return `<tr style="border-bottom:1px solid var(--slate-100);transition:background .15s;" onmouseover="this.style.background='var(--slate-50)'" onmouseout="this.style.background='transparent'">
+        <td style="padding:14px 16px;font-family:'Poppins',sans-serif;font-weight:700;color:var(--cyan-700);">${ticket}</td>
+        <td style="padding:14px 16px;color:var(--slate-500);font-size:12px;">${p['Date']||''}<br/><span style="color:var(--slate-400);">${p['Time']||''}</span></td>
+        <td style="padding:14px 16px;">
+          <div style="font-weight:700;color:var(--slate-900);">${p['Patient Name']||'—'}</div>
+          <div style="font-size:12px;color:var(--slate-500);">👤 ${p['Age']||'?'}y ${p['Gender']||''} · 📞 ${p['Phone']||'N/A'}</div>
+        </td>
+        <td style="padding:14px 16px;max-width:200px;color:var(--slate-700);">${p['Chief Complaint']||'—'}</td>
+        <td style="padding:14px 16px;"><span style="padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;${levelColor}">${level}</span></td>
+        <td style="padding:14px 16px;">${medsBadge}</td>
+        <td style="padding:14px 16px;text-align:center;">
+          <button onclick="openArchivePatientModal('${ticket}')" style="padding:7px 14px;background:linear-gradient(135deg,var(--cyan-600),var(--indigo-600));color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">👁️ View File &amp; Rx</button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function openArchivePatientModal(ticketNumber){
+    const p = rawHistory.find(x => x['Ticket No.'] === ticketNumber) || allPatients.find(x => x['Ticket No.'] === ticketNumber) || completedPatients.find(x => x['Ticket No.'] === ticketNumber);
+    if(!p) { toast('⚠️ Patient record not found.'); return; }
+
+    currentPatientIdx = null;
+    const level = p['Triage Level'] || 'ROUTINE';
+    const lEl = document.getElementById('mLevel');
+    lEl.className = 'modal-level ' + level; lEl.textContent = level;
+    document.getElementById('mName').textContent = p['Patient Name'] || '—';
+    document.getElementById('mTicket').textContent = `🎫 ${p['Ticket No.'] || 'N/A'} · 📅 ${p['Date'] || ''} at ${p['Time'] || ''}`;
+    document.getElementById('rxPatientName').textContent = 'Patient: ' + (p['Patient Name'] || '—');
+    document.getElementById('mReasoning').textContent = p['AI Reasoning'] || 'No AI notes.';
+    document.getElementById('mRec').textContent = p['Recommendations'] || 'Standard care.';
+    document.getElementById('mGrid').innerHTML = [
+      ['Age', (p['Age']||'—')+' years'], ['Gender', p['Gender']||'—'],
+      ['Phone', p['Phone']||'N/A'], ['Pain Scale', (p['Pain Scale']||'—')+' / 10'],
+      ['Consciousness', p['Consciousness']||'—'], ['Duration', p['Duration']||'—'],
+      ['Chief Complaint', p['Chief Complaint']||'—', true],
+      ['Medical History', p['Medical History']||'None', true],
+      ['Medications', p['Medications']||'None', true],
+      ['Allergies', p['Allergies']||'None', true],
+    ].map(([l,v,full])=>`<div class="mg-item" ${full?'style="grid-column:1/-1"':''}><div class="mg-label">${l}</div><div class="mg-val">${v}</div></div>`).join('');
+
+    const saved = rxStore[ticketNumber] || (p.prescription ? { rows: p.prescription.medicines, advice: p.prescription.advice } : null);
+    initRxBuilder(saved?.rows || [], saved?.advice || '', ticketNumber, true);
+    switchTab('triage');
+    document.getElementById('overlay').classList.add('open');
   }
 
   /* ── Modal ── */
@@ -627,29 +888,13 @@
   }
 
   function openCompletedModal(i){
-    const p = completedPatients[i];
+    const todayCompleted = completedPatients.filter(p => isToday(p.completedAt || p['Date']));
+    const p = todayCompleted[i];
     if(!p) return;
-    // Reuse same modal but show completed state
-    currentPatientIdx = null;
-    document.getElementById('mLevel').className='modal-level COMPLETED'; document.getElementById('mLevel').textContent='COMPLETED';
-    document.getElementById('mName').textContent = p['Patient Name']||'—';
-    document.getElementById('mTicket').textContent = `🎫 ${p['Ticket No.']||'N/A'} · 🏁 Treated at ${p.completedAt||''}`;
-    document.getElementById('rxPatientName').textContent = 'Patient: '+(p['Patient Name']||'—');
-    document.getElementById('mReasoning').textContent = p['AI Reasoning']||'No AI notes.';
-    document.getElementById('mRec').textContent = p['Recommendations']||'Standard care.';
-    document.getElementById('mGrid').innerHTML = [
-      ['Age', (p['Age']||'—')+' years'], ['Gender', p['Gender']||'—'],
-      ['Chief Complaint', p['Chief Complaint']||'—', true],
-    ].map(([l,v,full])=>`<div class="mg-item" ${full?'style="grid-column:1/-1"':''}><div class="mg-label">${l}</div><div class="mg-val">${v}</div></div>`).join('');
-
-    const ticket = p['Ticket No.']||'';
-    const saved = rxStore[ticket];
-    initRxBuilder(saved?.rows||[], saved?.advice||'', ticket, true);
-    switchTab('rx');
-    document.getElementById('overlay').classList.add('open');
+    openArchivePatientModal(p['Ticket No.']);
   }
 
-  function closeModal(){ document.getElementById('overlay').classList.remove('open'); STT.stop(); }
+  function closeModal(){ document.getElementById('overlay').classList.remove('close'); document.getElementById('overlay').classList.remove('open'); STT.stop(); }
   function closeOverlay(e){ if(e.target===document.getElementById('overlay')) closeModal(); }
 
   function switchTab(tab){
@@ -677,7 +922,6 @@
     else { addRxRow(); } // Start with one blank row
 
     if(readonly){
-      // Mark as done already
       finBtn.textContent = '✅ Treatment Finalized';
       finBtn.classList.add('done-state');
       finBtn.disabled = true;
@@ -748,10 +992,23 @@
     const p = allPatients[currentPatientIdx];
     const { rows, advice } = getRxData();
 
-    // Save Rx
+    // Save Rx locally
     const ticket = p['Ticket No.']||'tmp';
     rxStore[ticket] = { rows, advice };
     localStorage.setItem('rxStore', JSON.stringify(rxStore));
+
+    // Save Rx to backend SQLite Database
+    fetch('/api/prescription', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ticket_number: ticket,
+        patient_name: p['Patient Name'] || 'Patient',
+        medicines: rows,
+        advice: advice,
+        status: 'COMPLETED'
+      })
+    }).catch(err => console.error('Prescription DB save error:', err));
 
     // Move to completed
     p.completedAt = new Date().toLocaleString('en-IN');
@@ -766,7 +1023,7 @@
     finBtn.classList.add('done-state');
     finBtn.disabled = true;
 
-    toast('✅ Patient moved to Completed queue. Prescription saved.');
+    toast('✅ Patient moved to Completed queue. Prescription saved permanently.');
     renderQueues();
   }
 

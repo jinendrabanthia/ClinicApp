@@ -1,100 +1,183 @@
-import sqlite3
+"""
+Supabase database layer for TriageAID.
+Replaces the previous SQLite/clinic.db implementation.
+Uses the supabase-py client with the service role key so it bypasses RLS.
+"""
+
 import os
-from contextlib import contextmanager
+import json
+from datetime import datetime, date
+from dotenv import load_dotenv
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "clinic.db")
+load_dotenv()
 
-@contextmanager
-def get_db_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
+from supabase import create_client, Client
+
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
+
+# Service-role client — bypasses RLS, server-side only
+_supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+
+
+def get_supabase() -> Client:
+    return _supabase
+
+
+# ─── Doctors ─────────────────────────────────────────────────
+
+def get_doctor_by_id(uid: str) -> dict | None:
+    res = _supabase.table("doctors").select("*").eq("id", uid).single().execute()
+    return res.data if res.data else None
+
+
+def get_doctor_by_email(email: str) -> dict | None:
+    res = _supabase.table("doctors").select("*").eq("email", email).maybe_single().execute()
+    return res.data if res.data else None
+
+
+def get_all_doctors() -> list:
+    res = _supabase.table("doctors").select(
+        "id, name, email, specialization, clinic, pincode, fee, upi, is_approved"
+    ).execute()
+    return res.data or []
+
+
+def update_doctor_profile(uid: str, updates: dict):
+    _supabase.table("doctors").update(updates).eq("id", uid).execute()
+
+
+# ─── Waiting List ─────────────────────────────────────────────
+
+def _generate_ticket(today_str: str) -> str:
+    """Generate unique daily ticket like RHC-20241001-0001."""
+    res = _supabase.table("waiting_list").select("ticket_number").eq("date", today_str).execute()
+    count = len(res.data) if res.data else 0
+    compact = today_str.replace("-", "")
+    return f"RHC-{compact}-{count + 1:04d}"
+
+
+def add_to_waiting_list(patient_data: dict, triage_result: dict) -> dict:
+    """Insert a new patient into the Supabase waiting_list table."""
     try:
-        yield conn
-    finally:
-        conn.commit()
-        conn.close()
+        today = date.today().isoformat()
+        ticket = _generate_ticket(today)
+        now = datetime.now()
+        level = triage_result.get("level", "ROUTINE")
 
-def init_db():
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        
-        # Doctors Table
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS doctors (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                email TEXT NOT NULL UNIQUE,
-                password TEXT NOT NULL,
-                specialization TEXT,
-                license TEXT,
-                clinic TEXT,
-                pincode TEXT,
-                fee INTEGER,
-                upi TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        
-        # Waiting List Table
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS waiting_list (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                ticket_number TEXT UNIQUE,
-                doctor_id TEXT,
-                patient_name TEXT,
-                age INTEGER,
-                gender TEXT,
-                phone TEXT,
-                email TEXT,
-                symptoms TEXT,
-                duration TEXT,
-                pain_scale INTEGER,
-                consciousness TEXT,
-                medical_history TEXT,
-                medications TEXT,
-                allergies TEXT,
-                triage_level TEXT,
-                ai_reasoning TEXT,
-                recommendations TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (doctor_id) REFERENCES doctors(id)
-            )
-        ''')
+        row = {
+            "ticket_number": ticket,
+            "patient_name": patient_data.get("name", ""),
+            "age": patient_data.get("age"),
+            "gender": patient_data.get("gender", ""),
+            "phone": patient_data.get("phone", ""),
+            "email": patient_data.get("email", ""),
+            "symptoms": patient_data.get("symptoms", ""),
+            "duration": patient_data.get("duration", ""),
+            "pain_scale": patient_data.get("pain_scale"),
+            "consciousness": patient_data.get("consciousness", ""),
+            "medical_history": patient_data.get("medical_history", ""),
+            "medications": patient_data.get("medications", ""),
+            "allergies": patient_data.get("allergies", ""),
+            "triage_level": level,
+            "ai_reasoning": triage_result.get("reasoning", ""),
+            "recommendations": triage_result.get("recommendations", ""),
+            "date": today,
+        }
 
-def get_doctor_by_id(doctor_id):
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM doctors WHERE id = ?", (doctor_id,))
-        row = cursor.fetchone()
-        return dict(row) if row else None
+        _supabase.table("waiting_list").insert(row).execute()
+        return {"success": True, "ticket_number": ticket, "error": None}
 
-def get_doctor_by_email(email):
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM doctors WHERE email = ?", (email,))
-        row = cursor.fetchone()
-        return dict(row) if row else None
+    except Exception as e:
+        return {"success": False, "ticket_number": None, "error": str(e)}
 
-def create_doctor(doctor_data):
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO doctors (id, name, email, password, specialization, license, clinic, pincode, fee, upi)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            doctor_data.get('id'), doctor_data.get('name'), doctor_data.get('email'),
-            doctor_data.get('password'), doctor_data.get('specialization'),
-            doctor_data.get('license'), doctor_data.get('clinic'),
-            doctor_data.get('pincode'), doctor_data.get('fee', 0),
-            doctor_data.get('upi')
-        ))
-        return doctor_data.get('id')
 
-def get_all_doctors():
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT id, name, email, specialization, clinic, pincode, fee, upi FROM doctors")
-        return [dict(row) for row in cursor.fetchall()]
+def get_waiting_list(today_only: bool = True) -> list:
+    """
+    Return waiting list rows formatted with the same keys as the old Excel system
+    so existing frontend code keeps working.
+    If today_only=True, only return today's queue.
+    """
+    try:
+        query = _supabase.table("waiting_list").select("*").order("created_at", desc=False)
+        if today_only:
+            query = query.eq("date", date.today().isoformat())
+        res = query.execute()
+        rows = res.data or []
 
-# Initialize on import
-init_db()
+        # Map DB column names → old Excel HEADERS keys for backward compat
+        def _fmt(r: dict) -> dict:
+            ts = r.get("created_at", "")
+            try:
+                dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                date_str = dt.strftime("%d-%m-%Y")
+                time_str = dt.strftime("%I:%M %p")
+            except Exception:
+                date_str = r.get("date", "")
+                time_str = ""
+
+            return {
+                "Ticket No.": r.get("ticket_number", ""),
+                "Date": date_str,
+                "Time": time_str,
+                "Patient Name": r.get("patient_name", ""),
+                "Age": r.get("age", ""),
+                "Gender": r.get("gender", ""),
+                "Phone": r.get("phone", ""),
+                "Email": r.get("email", ""),
+                "Chief Complaint": r.get("symptoms", ""),
+                "Duration": r.get("duration", ""),
+                "Pain Scale": r.get("pain_scale", ""),
+                "Consciousness": r.get("consciousness", ""),
+                "Medical History": r.get("medical_history", ""),
+                "Medications": r.get("medications", ""),
+                "Allergies": r.get("allergies", ""),
+                "Triage Level": r.get("triage_level", ""),
+                "AI Reasoning": r.get("ai_reasoning", ""),
+                "Recommendations": r.get("recommendations", ""),
+            }
+
+        return [_fmt(r) for r in rows]
+    except Exception:
+        return []
+
+
+def get_all_waiting_list_history() -> list:
+    """Return ALL patient records (all dates) — used for history/archive view."""
+    return get_waiting_list(today_only=False)
+
+
+# ─── Prescriptions ────────────────────────────────────────────
+
+def save_prescription(ticket_number: str, patient_name: str, medicines, advice: str, status: str = "COMPLETED"):
+    meds = medicines if isinstance(medicines, list) else []
+    row = {
+        "ticket_number": ticket_number,
+        "patient_name": patient_name,
+        "medicines_json": meds,
+        "advice": advice,
+        "status": status,
+    }
+    # Upsert: insert or update on conflict
+    _supabase.table("prescriptions").upsert(row, on_conflict="ticket_number").execute()
+
+
+def get_prescription(ticket_number: str) -> dict | None:
+    res = _supabase.table("prescriptions").select("*").eq("ticket_number", ticket_number).maybe_single().execute()
+    if res.data:
+        d = dict(res.data)
+        d["medicines"] = d.get("medicines_json") or []
+        return d
+    return None
+
+
+def get_all_prescriptions() -> dict:
+    """Return dict keyed by ticket_number — same interface as old SQLite version."""
+    res = _supabase.table("prescriptions").select("*").order("created_at", desc=True).execute()
+    result = {}
+    for r in (res.data or []):
+        d = dict(r)
+        d["medicines"] = d.get("medicines_json") or []
+        result[d["ticket_number"]] = d
+    return result

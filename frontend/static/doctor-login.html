@@ -344,17 +344,9 @@
         <div class="auth-title">Welcome Back, Doctor</div>
         <div class="auth-sub">Sign in to view your patient queue</div>
 
-        <!-- Mock credentials hint -->
-        <div class="mock-box">
-          <div class="mock-title">🧪 Demo Credentials</div>
-          <div class="mock-cred"><span>Doctor ID</span><strong>DOC001</strong></div>
-          <div class="mock-cred"><span>Password</span><strong>password123</strong></div>
-          <button class="btn-fill" onclick="fillDemo()">Auto-fill Demo →</button>
-        </div>
-
         <div class="field">
-          <label for="loginId">Doctor ID / Email <span class="req">*</span></label>
-          <input type="text" id="loginId" placeholder="e.g. DOC001 or doctor@clinic.in"/>
+          <label for="loginId">Doctor / Admin ID <span class="req">*</span></label>
+          <input type="text" id="loginId" placeholder="Enter your ID or Email"/>
         </div>
         <div class="field">
           <label for="loginPass">Password <span class="req">*</span></label>
@@ -362,82 +354,23 @@
         </div>
         <button class="btn-submit" onclick="doLogin()" id="loginBtn">
           <span class="spinner" id="loginSpinner"></span>
-          Sign In to Dashboard
+          Sign In to Portal
         </button>
         <div class="msg error" id="loginErr"></div>
         <div style="text-align:center;margin-top:18px;font-size:13px;color:var(--gray-500);">
-          Don't have an account? <button onclick="showTab('register')" style="background:none;border:none;color:#2563eb;font-weight:600;cursor:pointer;font-size:13px;">Register here →</button>
+          Authorized Personnel Only
         </div>
       </div>
 
       <!-- ── REGISTER FORM ── -->
       <div id="registerForm" style="display:none;">
-        <div class="auth-title">Doctor Registration</div>
-        <div class="auth-sub">Create your profile to receive triage alerts</div>
-
-        <div class="field-row">
-          <div class="field">
-            <label for="regName">Full Name <span class="req">*</span></label>
-            <input type="text" id="regName" placeholder="Dr. Priya Sharma"/>
+        <div class="auth-title">Doctor Portal Access</div>
+        <div class="auth-sub">Registration is restricted to authorized personnel.</div>
+        <div style="background:var(--gray-100);border-radius:12px;padding:20px;margin-top:20px;font-size:13px;color:var(--gray-600);line-height:1.6;">
+          🔒 Registration is currently disabled. Please sign in using your assigned administrator credentials.
+          <div style="margin-top:14px;">
+            <button class="btn-fill" onclick="showTab('login')">Go to Login →</button>
           </div>
-          <div class="field">
-            <label for="regId">Doctor ID <span class="req">*</span></label>
-            <input type="text" id="regId" placeholder="DOC001"/>
-          </div>
-        </div>
-        <div class="field">
-          <label for="regEmail">Email Address <span class="req">*</span></label>
-          <input type="email" id="regEmail" placeholder="doctor@clinic.in"/>
-          <div class="input-hint">You'll receive critical case alerts at this email</div>
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label for="regSpec">Specialization <span class="req">*</span></label>
-            <select id="regSpec">
-              <option value="">Select...</option>
-              <option>General Physician</option>
-              <option>Emergency Medicine</option>
-              <option>Paediatrician</option>
-              <option>Gynaecologist / Obstetrician</option>
-              <option>Surgeon</option>
-              <option>Internal Medicine</option>
-              <option>Other</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="regLicense">License No. <span class="req">*</span></label>
-            <input type="text" id="regLicense" placeholder="MCI-XXXX-YYYY"/>
-          </div>
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label for="regClinic">Clinic Name</label>
-            <input type="text" id="regClinic" placeholder="Rural Health Centre"/>
-          </div>
-          <div class="field">
-            <label for="regPin">Clinic Pincode <span class="req">*</span></label>
-            <input type="text" id="regPin" placeholder="e.g. 110001" maxlength="6"/>
-            <div class="input-hint">📍 Used to route nearest patient alerts</div>
-          </div>
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label for="regPass">Password <span class="req">*</span></label>
-            <input type="password" id="regPass" placeholder="Min. 8 characters"/>
-          </div>
-          <div class="field">
-            <label for="regPass2">Confirm Password <span class="req">*</span></label>
-            <input type="password" id="regPass2" placeholder="Repeat password"/>
-          </div>
-        </div>
-        <button class="btn-submit" onclick="doRegister()" id="regBtn">
-          <span class="spinner" id="regSpinner"></span>
-          Create Doctor Account
-        </button>
-        <div class="msg error" id="regErr"></div>
-        <div class="msg success" id="regSuccess"></div>
-        <div style="text-align:center;margin-top:18px;font-size:13px;color:var(--gray-500);">
-          Already registered? <button onclick="showTab('login')" style="background:none;border:none;color:#2563eb;font-weight:600;cursor:pointer;font-size:13px;">Sign in →</button>
         </div>
       </div>
 
@@ -446,11 +379,6 @@
 </main>
 
 <script>
-  // Mock doctor store
-  const MOCK_DOCTORS = {
-    'DOC001': { name: 'Dr. Rajan Mehta', password: 'password123', email: 'doc001@clinic.in', specialization: 'General Physician', clinic: 'Rural Health Centre', pincode: '110001', license: 'MCI-0001-2020' }
-  };
-
   function showTab(t) {
     document.getElementById('loginForm').style.display = t === 'login' ? 'block' : 'none';
     document.getElementById('registerForm').style.display = t === 'register' ? 'block' : 'none';
@@ -458,73 +386,51 @@
     document.getElementById('tabRegister').className = 'tab' + (t==='register'?' active':'');
   }
 
-  function fillDemo() {
-    document.getElementById('loginId').value = 'DOC001';
-    document.getElementById('loginPass').value = 'password123';
-  }
-
   function doLogin() {
     const id = document.getElementById('loginId').value.trim();
     const pw = document.getElementById('loginPass').value;
     const errEl = document.getElementById('loginErr');
     errEl.style.display = 'none';
-    if (!id || !pw) { showErr(errEl, 'Please enter your Doctor ID and password.'); return; }
+    if (!id || !pw) { showErr(errEl, 'Please enter ID and password.'); return; }
 
     const btn = document.getElementById('loginBtn');
     const spinner = document.getElementById('loginSpinner');
     btn.classList.add('loading'); spinner.style.display = 'inline-block';
 
     setTimeout(() => {
-      const doc = MOCK_DOCTORS[id] || Object.values(MOCK_DOCTORS).find(d => d.email === id);
-      if (doc && doc.password === pw) {
+      if ((id === 'admin' || id.toLowerCase() === 'admin@clinic.in') && pw === 'admin@123') {
+        const doc = {
+          id: 'admin',
+          name: 'Dr. Admin',
+          email: 'admin@clinic.in',
+          specialization: 'Chief Medical Officer',
+          clinic: 'Rural Health Centre',
+          pincode: '110001',
+          license: 'MCI-ADMIN-001'
+        };
         sessionStorage.setItem('loggedDoctor', JSON.stringify(doc));
         window.location.href = '/doctor-dashboard';
       } else {
         btn.classList.remove('loading'); spinner.style.display = 'none';
-        showErr(errEl, '⚠️ Invalid Doctor ID or password. Try: DOC001 / password123');
+        showErr(errEl, '⚠️ Invalid Doctor ID or Password.');
       }
-    }, 1200);
-  }
-
-  function doRegister() {
-    const name = document.getElementById('regName').value.trim();
-    const id = document.getElementById('regId').value.trim();
-    const email = document.getElementById('regEmail').value.trim();
-    const spec = document.getElementById('regSpec').value;
-    const license = document.getElementById('regLicense').value.trim();
-    const pin = document.getElementById('regPin').value.trim();
-    const pw = document.getElementById('regPass').value;
-    const pw2 = document.getElementById('regPass2').value;
-    const errEl = document.getElementById('regErr');
-    const succEl = document.getElementById('regSuccess');
-    errEl.style.display = 'none'; succEl.style.display = 'none';
-
-    if (!name||!id||!email||!spec||!license||!pin||!pw) { showErr(errEl,'Please fill all required fields.'); return; }
-    if (pw !== pw2) { showErr(errEl,'Passwords do not match.'); return; }
-    if (pw.length < 8) { showErr(errEl,'Password must be at least 8 characters.'); return; }
-    if (!/^\d{6}$/.test(pin)) { showErr(errEl,'Enter a valid 6-digit pincode.'); return; }
-
-    const btn = document.getElementById('regBtn');
-    const spinner = document.getElementById('regSpinner');
-    btn.classList.add('loading'); spinner.style.display = 'inline-block';
-
-    setTimeout(() => {
-      const doc = { name, id, email, password: pw, specialization: spec, license, pincode: pin, clinic: document.getElementById('regClinic').value.trim() };
-      MOCK_DOCTORS[id] = doc;
-      sessionStorage.setItem('loggedDoctor', JSON.stringify(doc));
-      btn.classList.remove('loading'); spinner.style.display = 'none';
-      succEl.textContent = '✅ Account created! Redirecting to your dashboard...';
-      succEl.style.display = 'block';
-      setTimeout(() => { window.location.href = '/doctor-dashboard'; }, 1500);
-    }, 1500);
+    }, 800);
   }
 
   function showErr(el, msg) { el.textContent = msg; el.style.display = 'block'; }
 
-  // Redirect if already logged in
-  if (sessionStorage.getItem('loggedDoctor')) {
-    window.location.href = '/doctor-dashboard';
-  }
+  // Redirect if already logged in as admin
+  (function(){
+    try {
+      const stored = sessionStorage.getItem('loggedDoctor');
+      if (stored) {
+        const d = JSON.parse(stored);
+        if (d && d.id === 'admin') {
+          window.location.href = '/doctor-dashboard';
+        }
+      }
+    } catch(e){}
+  })();
 </script>
 
 <div class="credits-footer">

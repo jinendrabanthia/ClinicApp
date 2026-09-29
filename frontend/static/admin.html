@@ -284,6 +284,7 @@
       <span>TriageAID</span>
     </div>
     <span class="nav-badge">ADMIN</span>
+    <button onclick="logoutAdmin()" style="margin-left:auto;padding:6px 14px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">Sign Out</button>
     <a href="/" class="back-link">← Back to Home</a>
   </nav>
 
@@ -332,6 +333,27 @@
   </main>
 
   <script>
+    /* Auth Guard */
+    (function(){
+      try {
+        const stored = sessionStorage.getItem('loggedDoctor');
+        if (!stored) { window.location.href = '/doctor-login'; return; }
+        const d = JSON.parse(stored);
+        if (!d || d.id !== 'admin') {
+          sessionStorage.removeItem('loggedDoctor');
+          window.location.href = '/doctor-login';
+        }
+      } catch(e) {
+        sessionStorage.removeItem('loggedDoctor');
+        window.location.href = '/doctor-login';
+      }
+    })();
+
+    function logoutAdmin() {
+      sessionStorage.removeItem('loggedDoctor');
+      window.location.href = '/doctor-login';
+    }
+
     let allRows = [];
     let currentFilter = 'all';
 

@@ -5,6 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Prescription — TriageAID Rural Clinic</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Serif:wght@400;700&display=swap" rel="stylesheet">
+  <script>
+    (function(){
+      try {
+        const stored = sessionStorage.getItem('loggedDoctor');
+        if (!stored) { window.location.href = '/doctor-login'; return; }
+        const d = JSON.parse(stored);
+        if (!d || d.id !== 'admin') {
+          sessionStorage.removeItem('loggedDoctor');
+          window.location.href = '/doctor-login';
+        }
+      } catch(e) {
+        sessionStorage.removeItem('loggedDoctor');
+        window.location.href = '/doctor-login';
+      }
+    })();
+  </script>
   <style>
     /* ── Base Reset ─────────────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }

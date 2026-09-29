@@ -14,6 +14,7 @@ from triage_agent import triage_patient
 from mailer import send_critical_alert, send_routine_confirmation
 from excel_log import add_to_waiting_list, get_waiting_list
 from notify import send_medication_reminder, send_appointment_reminder, send_triage_confirmation
+from db import save_prescription, get_prescription, get_all_prescriptions
 
 app = Flask(__name__, static_folder="../frontend/static", static_url_path="")
 CORS(app)
@@ -119,12 +120,86 @@ def api_triage():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/api/doctor/login", methods=["POST"])
+def api_doctor_login():
+    """POST /api/doctor/login — Authenticate doctor/admin user."""
+    try:
+        data = request.get_json() or {}
+        username = (data.get("id") or data.get("username") or data.get("email") or "").strip()
+        password = data.get("password", "").strip()
+
+        if (username == "admin" or username.lower() == "admin@clinic.in") and password == "admin@123":
+            return jsonify({
+                "success": True,
+                "doctor": {
+                    "id": "admin",
+                    "name": "Dr. Admin",
+                    "email": "admin@clinic.in",
+                    "specialization": "Chief Medical Officer",
+                    "clinic": "Rural Health Centre",
+                    "pincode": "110001",
+                    "license": "MCI-ADMIN-001"
+                }
+            })
+        return jsonify({"success": False, "error": "Invalid Doctor ID or Password."}), 401
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/waiting-list", methods=["GET"])
 def api_waiting_list():
     """GET /api/waiting-list — Return all entries in the waiting list."""
     try:
         rows = get_waiting_list()
         return jsonify({"success": True, "count": len(rows), "rows": rows})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/prescription", methods=["POST"])
+def api_save_prescription():
+    """POST /api/prescription — Save digital prescription into database."""
+    try:
+        body = request.get_json() or {}
+        ticket = body.get("ticket_number") or body.get("ticket")
+        name = body.get("patient_name", "Patient")
+        medicines = body.get("medicines", [])
+        advice = body.get("advice", "")
+        status = body.get("status", "COMPLETED")
+        if not ticket:
+            return jsonify({"error": "Ticket number required"}), 400
+        save_prescription(ticket, name, medicines, advice, status)
+        return jsonify({"success": True, "ticket_number": ticket})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/prescriptions", methods=["GET"])
+def api_get_prescriptions():
+    """GET /api/prescriptions — Return all prescriptions stored in DB."""
+    try:
+        data = get_all_prescriptions()
+        return jsonify({"success": True, "prescriptions": data})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/patient-history", methods=["GET"])
+def api_patient_history():
+    """GET /api/patient-history — Return all patient records (past and present) enriched with prescriptions."""
+    try:
+        rows = get_waiting_list()
+        prescriptions = get_all_prescriptions()
+        history = []
+        for r in rows:
+            ticket = r.get("Ticket No.", "")
+            item = dict(r)
+            if ticket in prescriptions:
+                item["prescription"] = prescriptions[ticket]
+            else:
+                item["prescription"] = None
+            history.append(item)
+        return jsonify({"success": True, "count": len(history), "history": history})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

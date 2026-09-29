@@ -6,14 +6,21 @@ Uses Gemini with a highly-calibrated prompt for confident, decisive assessments.
 import os
 import json
 import re
+from dotenv import load_dotenv
 import google.generativeai as genai
 from symptom_guide import SYMPTOM_SEVERITY_GUIDE
 
+load_dotenv()
+
 
 def get_gemini_client():
-    api_key = os.environ.get("GEMINI_API_KEY", "")
+    api_key = os.environ.get("GEMINI_API_KEY", "") or os.environ.get("GOOGLE_API_KEY", "")
     genai.configure(api_key=api_key)
-    return genai.GenerativeModel("gemini-1.5-pro")
+    # Prefer gemini-1.5-flash for speed and reliability
+    try:
+        return genai.GenerativeModel("gemini-1.5-flash")
+    except Exception:
+        return genai.GenerativeModel("gemini-1.5-pro")
 
 
 # ---------------------------------------------------------------------------

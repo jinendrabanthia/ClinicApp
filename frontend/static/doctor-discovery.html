@@ -8,6 +8,22 @@
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script>
+    (function(){
+      try {
+        const stored = sessionStorage.getItem('loggedDoctor');
+        if (!stored) { window.location.href = '/doctor-login'; return; }
+        const d = JSON.parse(stored);
+        if (!d || d.id !== 'admin') {
+          sessionStorage.removeItem('loggedDoctor');
+          window.location.href = '/doctor-login';
+        }
+      } catch(e) {
+        sessionStorage.removeItem('loggedDoctor');
+        window.location.href = '/doctor-login';
+      }
+    })();
+  </script>
 
   <style>
     * { font-family: 'Inter', sans-serif; }
