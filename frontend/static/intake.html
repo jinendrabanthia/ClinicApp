@@ -573,8 +573,11 @@
     return true;
   }
   function validate2() {
-    if(!document.getElementById('symptoms').value.trim()){flash('symptoms');return false}
-    if(!document.getElementById('duration').value){flash('duration');return false}
+    const sym = document.getElementById('symptoms').value.trim();
+    const dur = document.getElementById('duration').value;
+    if(!sym){ flash('symptoms'); return false; }
+    // Duration is helpful but not fatal — flash it as a soft warning and continue
+    if(!dur){ flash('duration'); }
     return true;
   }
   function flash(id) {
@@ -632,6 +635,8 @@
       lbl.textContent='Submit for AI Triage';
       err.textContent='⚠️ '+e.message;err.style.display='block';
     }
+  } // <-- MISSING BRACE ADDED HERE
+
   async function submitDirectBooking() {
     const btn=document.getElementById('directBookBtn');
     const lbl=document.getElementById('dbLabel');

@@ -175,29 +175,52 @@ def api_triage():
 
 @app.route("/api/book", methods=["POST"])
 def api_book():
-    """POST /api/book — Direct appointment booking."""
+    """POST /api/book — Direct appointment booking with full patient details."""
     try:
         data = request.get_json()
-        if not data or not data.get("name") or not data.get("phone"):
-            return jsonify({"error": "Missing required fields"}), 400
+        if not data or not data.get("name"):
+            return jsonify({"error": "Missing required fields (name)"}), 400
         
-        # Simulate patient data and result for the waiting list
+        # Safely parse integers
+        try:
+            age_val = int(data.get("age")) if data.get("age") else None
+        except ValueError:
+            age_val = None
+            
+        try:
+            pain_val = int(data.get("pain_scale")) if data.get("pain_scale") else 0
+        except ValueError:
+            pain_val = 0
+
+        # Accept full patient form data
         patient_data = {
-            "name": data["name"],
-            "phone": data["phone"],
-            "age": "N/A",
-            "gender": "N/A",
-            "symptoms": data.get("reason", "Direct Booking"),
-            "pain_scale": 0
+            "name": data.get("name", ""),
+            "age": age_val,
+            "gender": data.get("gender", ""),
+            "phone": data.get("phone", ""),
+            "email": data.get("email", ""),
+            "symptoms": data.get("symptoms", data.get("reason", "Direct Appointment")),
+            "duration": data.get("duration", ""),
+            "pain_scale": pain_val,
+            "consciousness": data.get("consciousness", "Alert and oriented"),
+            "medical_history": data.get("medical_history", "None"),
+            "medications": data.get("medications", "None"),
+            "allergies": data.get("allergies", "None"),
         }
-        result = {
+        triage_result = {
             "level": "ROUTINE",
-            "reasoning": f"Direct Booking scheduled for {data.get('date', 'Unknown Date')}"
+            "reasoning": "Direct Booking — Patient booked appointment without AI triage.",
+            "recommendations": "Please see the doctor.",
+            "source": "APPOINTMENT",
         }
         
-        log = add_to_waiting_list(patient_data, result)
+        log = add_to_waiting_list(patient_data, triage_result)
+        if not log.get("success"):
+            return jsonify({"error": log.get("error", "Database insert failed")}), 500
+            
+        ticket_number = log.get("ticket_number")
         
-        return jsonify({"success": True, "ticket": log.get("ticket_number")})
+        return jsonify({"success": True, "ticket_number": ticket_number, "ticket": ticket_number})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -210,6 +233,17 @@ def api_waiting_list():
     try:
         rows = get_waiting_list(today_only=True)
         return jsonify({"success": True, "count": len(rows), "rows": rows})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/appointments", methods=["GET"])
+def api_appointments():
+    """GET /api/appointments — Return patients who booked directly (not via AI triage)."""
+    try:
+        rows = get_waiting_list(today_only=False)
+        appointments = [r for r in rows if r.get("AI Reasoning", "").startswith("Direct Booking")]
+        return jsonify({"success": True, "count": len(appointments), "rows": appointments})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

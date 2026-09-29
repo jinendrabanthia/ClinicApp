@@ -17,11 +17,9 @@ SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
 
-# Use the anon key for the supabase-py client.
-# The service_role JWT is not provided — the anon key is used for authenticated
-# operations. RLS is set to allow service_role; we use postgres directly for
-# admin writes via psycopg2 (DATABASE_URL).
-_API_KEY = SUPABASE_ANON_KEY  # anon JWT works for all authenticated operations
+# The SUPABASE_SERVICE_KEY in .env is a valid JWT service role key.
+# Fall back to anon key if service key not available.
+_API_KEY = SUPABASE_SERVICE_KEY if (SUPABASE_SERVICE_KEY and SUPABASE_SERVICE_KEY.startswith("eyJ")) else SUPABASE_ANON_KEY
 _supabase: Client = create_client(SUPABASE_URL, _API_KEY)
 
 
@@ -115,11 +113,27 @@ def get_waiting_list(today_only: bool = True) -> list:
             ts = r.get("created_at", "")
             try:
                 dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
-                date_str = dt.strftime("%d-%m-%Y")
                 time_str = dt.strftime("%I:%M %p")
             except Exception:
-                date_str = r.get("date", "")
                 time_str = ""
+
+            # Use the local date stored by the server rather than UTC timestamp
+            raw_date = r.get("date", "")
+            if raw_date and "-" in raw_date:
+                try:
+                    # convert YYYY-MM-DD to DD-MM-YYYY for frontend compat
+                    parts = raw_date.split("-")
+                    if len(parts[0]) == 4:
+                        date_str = f"{parts[2]}-{parts[1]}-{parts[0]}"
+                    else:
+                        date_str = raw_date
+                except Exception:
+                    date_str = raw_date
+            else:
+                try:
+                    date_str = dt.strftime("%d-%m-%Y")
+                except Exception:
+                    date_str = ""
 
             return {
                 "Ticket No.": r.get("ticket_number", ""),
