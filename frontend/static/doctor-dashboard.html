@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Doctor Dashboard | TriageAID</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="/stt.js"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -579,24 +580,46 @@
   let rxRowCount = 0;
   let activeMainView = 'today';
 
-  /* ── Auth Guard ── */
-  let doc = null;
-  try {
-    const stored = sessionStorage.getItem('loggedDoctor');
-    if (!stored) { window.location.href = '/doctor-login'; }
-    doc = JSON.parse(stored || '{}');
-    if (!doc || doc.id !== 'admin') {
-      sessionStorage.removeItem('loggedDoctor');
+  /* ── Supabase Auth Guard ── */
+  let _sbClient = null;
+  let doc = { name: '...', specialization: 'Loading...', email: '' };
+
+  async function initAuth() {
+    try {
+      const res = await fetch('/api/auth/config');
+      const cfg = await res.json();
+      _sbClient = window.supabase.createClient(cfg.supabase_url, cfg.supabase_anon_key);
+
+      // Handle OAuth redirect (access_token in URL hash)
+      const { data: { session } } = await _sbClient.auth.getSession();
+      if (!session) {
+        window.location.href = '/doctor-login';
+        return;
+      }
+      const user = session.user;
+      // Populate nav from user metadata / email
+      const displayName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Doctor';
+      const displayEmail = user.email || '';
+      doc = { name: displayName, email: displayEmail, specialization: 'Doctor' };
+      document.getElementById('docNm').textContent = displayName;
+      document.getElementById('docSp').textContent = displayEmail;
+      document.getElementById('docAv').textContent = displayName.charAt(0).toUpperCase();
+
+      // Store session for API calls
+      sessionStorage.setItem('sb_access_token', session.access_token);
+
+    } catch(e) {
+      console.error('Auth init error', e);
       window.location.href = '/doctor-login';
     }
-  } catch(e) {
-    sessionStorage.removeItem('loggedDoctor');
+  }
+  initAuth();
+
+  async function logout() {
+    if (_sbClient) await _sbClient.auth.signOut();
+    sessionStorage.clear();
     window.location.href = '/doctor-login';
   }
-  document.getElementById('docNm').textContent = doc ? (doc.name || 'Dr. Admin') : 'Dr. Admin';
-  document.getElementById('docSp').textContent = doc ? (doc.specialization || 'Chief Medical Officer') : 'Chief Medical Officer';
-  document.getElementById('docAv').textContent = 'AD';
-  function logout(){ sessionStorage.removeItem('loggedDoctor'); window.location.href='/doctor-login'; }
 
   /* ── Connectivity ── */
   function updateConn(){

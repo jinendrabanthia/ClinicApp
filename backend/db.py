@@ -17,8 +17,12 @@ SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY", "")
 
-# Service-role client — bypasses RLS, server-side only
-_supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+# Use the anon key for the supabase-py client.
+# The service_role JWT is not provided — the anon key is used for authenticated
+# operations. RLS is set to allow service_role; we use postgres directly for
+# admin writes via psycopg2 (DATABASE_URL).
+_API_KEY = SUPABASE_ANON_KEY  # anon JWT works for all authenticated operations
+_supabase: Client = create_client(SUPABASE_URL, _API_KEY)
 
 
 def get_supabase() -> Client:

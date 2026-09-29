@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Doctor Portal — Login & Register | TriageAID</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
@@ -145,21 +146,20 @@
     .btn-submit:active{transform:none;}
     .btn-submit.loading{opacity:.7;cursor:not-allowed;}
 
-    /* Mock credentials */
-    .mock-box{
-      background:linear-gradient(135deg,rgba(59,130,246,0.08),rgba(99,102,241,0.08));
-      border:1.5px dashed rgba(59,130,246,0.3);
-      border-radius:12px;padding:14px 18px;margin-bottom:20px;
-    }
-    .mock-title{font-size:12px;font-weight:700;color:var(--blue-600);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;}
-    .mock-cred{display:flex;justify-content:space-between;font-size:12px;color:var(--gray-600);padding:2px 0;}
-    .mock-cred strong{color:var(--gray-800);}
     .btn-fill{
       margin-top:8px;padding:6px 14px;background:#fff;border:1px solid rgba(59,130,246,0.3);
       border-radius:8px;font-size:12px;font-weight:600;color:var(--blue-600);
       cursor:pointer;transition:all .2s;
     }
     .btn-fill:hover{background:rgba(59,130,246,0.08);}
+    .btn-google{
+      width:100%;padding:14px;display:flex;align-items:center;justify-content:center;gap:10px;
+      background:#fff;border:1.5px solid var(--gray-200);border-radius:12px;
+      font-size:15px;font-weight:600;color:var(--gray-700);cursor:pointer;transition:all .2s;
+      margin-bottom:4px;
+    }
+    .btn-google:hover{border-color:#4285f4;box-shadow:0 4px 12px rgba(66,133,244,0.15);}
+    .google-icon{width:20px;height:20px;}
 
     /* Error/Success */
     .msg{border-radius:10px;padding:12px 16px;font-size:13px;margin-top:14px;display:none;}
@@ -333,104 +333,115 @@
   <!-- Right panel — Auth form -->
   <div class="right-panel">
     <div class="auth-box">
-      <!-- Tab toggle -->
-      <div class="toggle-tabs">
-        <button class="tab active" id="tabLogin" onclick="showTab('login')">Login</button>
-        <button class="tab" id="tabRegister" onclick="showTab('register')">Register</button>
-      </div>
-
       <!-- ── LOGIN FORM ── -->
       <div id="loginForm">
         <div class="auth-title">Welcome Back, Doctor</div>
         <div class="auth-sub">Sign in to view your patient queue</div>
 
+        <!-- Google OAuth button -->
+        <button class="btn-google" id="googleLoginBtn" onclick="doGoogleLogin()">
+          <svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Continue with Google
+        </button>
+
+        <div class="divider"><hr/><span>or sign in with email</span><hr/></div>
+
         <div class="field">
-          <label for="loginId">Doctor / Admin ID <span class="req">*</span></label>
-          <input type="text" id="loginId" placeholder="Enter your ID or Email"/>
+          <label for="loginEmail">Email Address <span class="req">*</span></label>
+          <input type="email" id="loginEmail" placeholder="doctor@example.com"/>
         </div>
         <div class="field">
           <label for="loginPass">Password <span class="req">*</span></label>
-          <input type="password" id="loginPass" placeholder="Enter your password"/>
+          <input type="password" id="loginPass" placeholder="Your password"/>
         </div>
         <button class="btn-submit" onclick="doLogin()" id="loginBtn">
           <span class="spinner" id="loginSpinner"></span>
           Sign In to Portal
         </button>
         <div class="msg error" id="loginErr"></div>
-        <div style="text-align:center;margin-top:18px;font-size:13px;color:var(--gray-500);">
-          Authorized Personnel Only
-        </div>
       </div>
 
-      <!-- ── REGISTER FORM ── -->
-      <div id="registerForm" style="display:none;">
-        <div class="auth-title">Doctor Portal Access</div>
-        <div class="auth-sub">Registration is restricted to authorized personnel.</div>
-        <div style="background:var(--gray-100);border-radius:12px;padding:20px;margin-top:20px;font-size:13px;color:var(--gray-600);line-height:1.6;">
-          🔒 Registration is currently disabled. Please sign in using your assigned administrator credentials.
-          <div style="margin-top:14px;">
-            <button class="btn-fill" onclick="showTab('login')">Go to Login →</button>
-          </div>
-        </div>
-      </div>
+
 
     </div>
   </div>
 </main>
 
 <script>
-  function showTab(t) {
-    document.getElementById('loginForm').style.display = t === 'login' ? 'block' : 'none';
-    document.getElementById('registerForm').style.display = t === 'register' ? 'block' : 'none';
-    document.getElementById('tabLogin').className = 'tab' + (t==='login'?' active':'');
-    document.getElementById('tabRegister').className = 'tab' + (t==='register'?' active':'');
+  // ── Supabase client init (fetched from backend to avoid hardcoding) ──────
+  let _supabase = null;
+
+  async function getSupabase() {
+    if (_supabase) return _supabase;
+    try {
+      const res = await fetch('/api/auth/config');
+      const cfg = await res.json();
+      _supabase = window.supabase.createClient(cfg.supabase_url, cfg.supabase_anon_key);
+    } catch(e) {
+      console.error('Supabase config fetch failed', e);
+    }
+    return _supabase;
   }
 
-  function doLogin() {
-    const id = document.getElementById('loginId').value.trim();
+  // ── Check existing session on load ──────────────────────────────────────
+  (async function() {
+    const sb = await getSupabase();
+    if (!sb) return;
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      // Already logged in — store and redirect
+      sessionStorage.setItem('sb_session', JSON.stringify(session));
+      window.location.href = '/doctor-dashboard';
+    }
+  })();
+
+
+  // ── Email/Password Login ─────────────────────────────────────────────────
+  async function doLogin() {
+    const email = document.getElementById('loginEmail').value.trim();
     const pw = document.getElementById('loginPass').value;
     const errEl = document.getElementById('loginErr');
     errEl.style.display = 'none';
-    if (!id || !pw) { showErr(errEl, 'Please enter ID and password.'); return; }
+    if (!email || !pw) { showErr(errEl, 'Please enter email and password.'); return; }
 
     const btn = document.getElementById('loginBtn');
     const spinner = document.getElementById('loginSpinner');
     btn.classList.add('loading'); spinner.style.display = 'inline-block';
 
-    setTimeout(() => {
-      if ((id === 'admin' || id.toLowerCase() === 'admin@clinic.in') && pw === 'admin@123') {
-        const doc = {
-          id: 'admin',
-          name: 'Dr. Admin',
-          email: 'admin@clinic.in',
-          specialization: 'Chief Medical Officer',
-          clinic: 'Rural Health Centre',
-          pincode: '110001',
-          license: 'MCI-ADMIN-001'
-        };
-        sessionStorage.setItem('loggedDoctor', JSON.stringify(doc));
-        window.location.href = '/doctor-dashboard';
-      } else {
-        btn.classList.remove('loading'); spinner.style.display = 'none';
-        showErr(errEl, '⚠️ Invalid Doctor ID or Password.');
-      }
-    }, 800);
+    const sb = await getSupabase();
+    if (!sb) { showErr(errEl, 'Auth service unavailable. Please try again.'); btn.classList.remove('loading'); spinner.style.display='none'; return; }
+
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pw });
+    btn.classList.remove('loading'); spinner.style.display = 'none';
+
+    if (error) {
+      showErr(errEl, '⚠️ ' + (error.message || 'Invalid credentials.'));
+      return;
+    }
+    sessionStorage.setItem('sb_session', JSON.stringify(data.session));
+    window.location.href = '/doctor-dashboard';
   }
+
+  // ── Google OAuth Login ───────────────────────────────────────────────────
+  async function doGoogleLogin() {
+    const sb = await getSupabase();
+    if (!sb) return;
+    await sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin + '/doctor-dashboard' }
+    });
+  }
+
+
 
   function showErr(el, msg) { el.textContent = msg; el.style.display = 'block'; }
 
-  // Redirect if already logged in as admin
-  (function(){
-    try {
-      const stored = sessionStorage.getItem('loggedDoctor');
-      if (stored) {
-        const d = JSON.parse(stored);
-        if (d && d.id === 'admin') {
-          window.location.href = '/doctor-dashboard';
-        }
-      }
-    } catch(e){}
-  })();
+  // Enter key support
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      doLogin();
+    }
+  });
 </script>
 
 <div class="credits-footer">

@@ -7,20 +7,17 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    (function(){
+    (async function(){
       try {
-        const stored = sessionStorage.getItem('loggedDoctor');
-        if (!stored) { window.location.href = '/doctor-login'; return; }
-        const d = JSON.parse(stored);
-        if (!d || d.id !== 'admin') {
-          sessionStorage.removeItem('loggedDoctor');
-          window.location.href = '/doctor-login';
-        }
-      } catch(e) {
-        sessionStorage.removeItem('loggedDoctor');
-        window.location.href = '/doctor-login';
-      }
+        const res = await fetch('/api/auth/config');
+        const cfg = await res.json();
+        const sb = window.supabase.createClient(cfg.supabase_url, cfg.supabase_anon_key);
+        const { data: { session } } = await sb.auth.getSession();
+        if (!session) { window.location.href = '/doctor-login'; }
+        window._sbClient = sb;
+      } catch(e) { window.location.href = '/doctor-login'; }
     })();
   </script>
   <style>

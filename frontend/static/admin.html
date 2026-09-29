@@ -6,6 +6,7 @@
   <title>Admin Panel | TriageAID Clinic Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -333,24 +334,21 @@
   </main>
 
   <script>
-    /* Auth Guard */
-    (function(){
+    /* Supabase Auth Guard */
+    let _sbAdmin = null;
+    (async function(){
       try {
-        const stored = sessionStorage.getItem('loggedDoctor');
-        if (!stored) { window.location.href = '/doctor-login'; return; }
-        const d = JSON.parse(stored);
-        if (!d || d.id !== 'admin') {
-          sessionStorage.removeItem('loggedDoctor');
-          window.location.href = '/doctor-login';
-        }
-      } catch(e) {
-        sessionStorage.removeItem('loggedDoctor');
-        window.location.href = '/doctor-login';
-      }
+        const res = await fetch('/api/auth/config');
+        const cfg = await res.json();
+        _sbAdmin = window.supabase.createClient(cfg.supabase_url, cfg.supabase_anon_key);
+        const { data: { session } } = await _sbAdmin.auth.getSession();
+        if (!session) { window.location.href = '/doctor-login'; }
+      } catch(e) { window.location.href = '/doctor-login'; }
     })();
 
-    function logoutAdmin() {
-      sessionStorage.removeItem('loggedDoctor');
+    async function logoutAdmin() {
+      if (_sbAdmin) await _sbAdmin.auth.signOut();
+      sessionStorage.clear();
       window.location.href = '/doctor-login';
     }
 
