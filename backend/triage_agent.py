@@ -16,11 +16,11 @@ load_dotenv()
 def get_gemini_client():
     api_key = os.environ.get("GEMINI_API_KEY", "") or os.environ.get("GOOGLE_API_KEY", "")
     genai.configure(api_key=api_key)
-    # Prefer gemini-1.5-flash for speed and reliability
+    # Prefer gemini-1.5-pro for maximum intelligence and better algorithms
     try:
-        return genai.GenerativeModel("gemini-1.5-flash")
-    except Exception:
         return genai.GenerativeModel("gemini-1.5-pro")
+    except Exception:
+        return genai.GenerativeModel("gemini-1.5-flash")
 
 
 # ---------------------------------------------------------------------------
@@ -120,15 +120,33 @@ Example 4 — URGENT child with fever:
   Input: age=4, symptoms=["fever 38.8°C","crying"], history=[]
   Output: classification=URGENT, risk_score=58, confidence=0.90, escalated=false
 
+===== ADVANCED TRIAGE ALGORITHM & CHAIN OF THOUGHT =====
+Before classifying, you MUST use 'reasoning_steps' to evaluate potential life-threatening conditions (differential diagnosis).
+1. Analyze all symptoms and patient risk factors (age, medical history).
+2. List 2-3 potential differential diagnoses.
+3. Eliminate non-critical diagnoses if red flags are present.
+4. Conclude the final classification confidently based on the scoring rubric.
+5. CALCULATION OF RISK SCORE (0-100):
+   - ROUTINE: Assign a precise number between 5 and 35 (e.g., 12, 24, 31).
+   - URGENT: Assign a precise number between 40 and 70 (e.g., 42, 58, 67).
+   - CRITICAL: Assign a precise number between 75 and 100 (e.g., 82, 94).
+   NEVER default to exactly 60 or 50. Calculate based on exact symptom severity.
+6. CALCULATION OF CONFIDENCE (0.0-1.0):
+   - If symptoms are classic textbook, assign > 0.90 (e.g., 0.94).
+   - If presentation is atypical, assign 0.70-0.85 (e.g., 0.78).
+   NEVER default to exactly 0.80.
+
 ===== OUTPUT FORMAT =====
 Return ONLY a valid JSON object. No markdown, no code fences, no extra text outside JSON.
 {{
+  "reasoning_steps": ["Step 1: ...", "Step 2: ...", "Step 3: ..."],
+  "differential_diagnosis": ["Diagnosis A", "Diagnosis B"],
   "classification": "CRITICAL" | "URGENT" | "ROUTINE",
-  "risk_score": <integer 0-100>,
-  "confidence": <float 0.0-1.0>,
+  "risk_score": <integer 0-100 (NEVER 60 exactly)>,
+  "confidence": <float 0.0-1.0 (NEVER 0.80 exactly)>,
   "escalated": false,
   "top_risk_factors": ["most important factor", "second factor", "..."],
-  "reasoning": "2-3 sentences in simple English explaining why. Name specific symptoms.",
+  "reasoning": "2-3 sentences summarizing the final decision.",
   "recommended_action": "Specific action for clinic staff or patient right now.",
   "urgency_note": "One decisive sentence about urgency level.",
   "requires_doctor": true | false,
@@ -235,10 +253,14 @@ Return ONLY the JSON object."""
             level = escalate_level(level)
             escalated = True
 
+        risk_score = result.get("risk_score")
+        if risk_score is None:
+            risk_score = result.get("riskScore", 50)
+
         return {
             "level": level,
             "classification": level,
-            "risk_score": int(result.get("risk_score", 50)),
+            "risk_score": int(risk_score),
             "confidence": round(confidence, 2),
             "escalated": escalated,
             "top_risk_factors": result.get("top_risk_factors", result.get("red_flags", [])),

@@ -460,15 +460,22 @@
       </div>
     </div>
 
-    <div style="text-align:center">
-      <button class="submit-btn" id="submitBtn" onclick="submitTriage()">
+    <div style="text-align:center; display: flex; flex-direction: column; gap: 12px; align-items: center;">
+      <button class="submit-btn" id="submitBtn" onclick="submitTriage()" style="width:100%; max-width:400px;">
         <div class="spinner"></div>
         <span class="s-icon">🤖</span>
         <span id="submitLabel">Submit for AI Triage</span>
       </button>
+
+      <button class="submit-btn" id="directBookBtn" onclick="submitDirectBooking()" style="width:100%; max-width:400px; background:linear-gradient(135deg,#0ea5e9,#14b8a6);">
+        <div class="spinner" id="dbSpinner"></div>
+        <span class="s-icon">📅</span>
+        <span id="dbLabel">Book Appointment Directly (Skip AI)</span>
+      </button>
+
       <div class="err-msg" id="errorMsg"></div>
       <p style="margin-top:14px;font-size:12px;color:var(--muted)">
-        Your data is processed securely and used only for this triage assessment.
+        Your data is processed securely and used only for this clinic's assessment.
       </p>
     </div>
     <div class="form-actions" style="justify-content:flex-start;margin-top:16px">
@@ -623,6 +630,39 @@
     } catch(e) {
       btn.classList.remove('loading');btn.disabled=false;
       lbl.textContent='Submit for AI Triage';
+      err.textContent='⚠️ '+e.message;err.style.display='block';
+    }
+  async function submitDirectBooking() {
+    const btn=document.getElementById('directBookBtn');
+    const lbl=document.getElementById('dbLabel');
+    const err=document.getElementById('errorMsg');
+    btn.classList.add('loading');btn.disabled=true;
+    lbl.textContent='Booking...';err.style.display='none';
+
+    const payload={
+      name:document.getElementById('name').value.trim(),
+      age:document.getElementById('age').value,
+      gender:document.getElementById('gender').value,
+      phone:document.getElementById('phone').value.trim(),
+      email:document.getElementById('email').value.trim(),
+      symptoms:document.getElementById('symptoms').value.trim(),
+      duration:document.getElementById('duration').value,
+      pain_scale:document.getElementById('painScale').value,
+      consciousness:document.getElementById('consciousness').value,
+      medical_history:document.getElementById('medical_history').value.trim()||'None',
+      medications:document.getElementById('medications').value.trim()||'None',
+      allergies:document.getElementById('allergies').value.trim()||'None',
+    };
+
+    try {
+      const res=await fetch('/api/book',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      const data=await res.json();
+      if(!res.ok||!data.success) throw new Error(data.error||'Booking failed. Please try again.');
+      alert('Appointment booked successfully! Your ticket number is ' + data.ticket_number);
+      window.location.href='/';
+    } catch(e) {
+      btn.classList.remove('loading');btn.disabled=false;
+      lbl.textContent='Book Appointment Directly (Skip AI)';
       err.textContent='⚠️ '+e.message;err.style.display='block';
     }
   }

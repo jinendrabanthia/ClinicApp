@@ -416,6 +416,7 @@
   </a>
   <div class="nav-center">
     <a href="/intake" class="nav-link">Patient Intake</a>
+    <a href="#" onclick="openBookModal(event)" class="nav-link">Book Appointment</a>
     <a href="/doctor-login" class="nav-link">Doctor Portal</a>
   </div>
   <div style="display:flex;align-items:center;gap:10px">
@@ -691,6 +692,86 @@
     b.textContent = '⚡ No internet connection';
     document.body.prepend(b);
   });
+
+  // Booking Modal Logic
+  function openBookModal(e) {
+    if(e) e.preventDefault();
+    document.getElementById('bookModal').style.display = 'flex';
+  }
+  function closeBookModal() {
+    document.getElementById('bookModal').style.display = 'none';
+  }
+  async function submitBooking() {
+    const btn = document.getElementById('bookBtn');
+    const err = document.getElementById('bookErr');
+    const ok = document.getElementById('bookOk');
+    err.style.display = 'none'; ok.style.display = 'none';
+    
+    const payload = {
+      name: document.getElementById('bookName').value.trim(),
+      phone: document.getElementById('bookPhone').value.trim(),
+      date: document.getElementById('bookDate').value,
+      reason: document.getElementById('bookReason').value.trim() || 'General Checkup'
+    };
+    
+    if(!payload.name || !payload.phone || !payload.date) {
+      err.textContent = 'Please fill all required fields.';
+      err.style.display = 'block'; return;
+    }
+    
+    btn.textContent = 'Booking...'; btn.disabled = true;
+    
+    try {
+      const res = await fetch('/api/book', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if(!res.ok || !data.success) throw new Error(data.error || 'Booking failed');
+      
+      ok.textContent = '✅ Appointment Booked! Ticket No: ' + data.ticket;
+      ok.style.display = 'block';
+      setTimeout(closeBookModal, 4000);
+    } catch(e) {
+      err.textContent = '⚠️ ' + e.message;
+      err.style.display = 'block';
+    } finally {
+      btn.textContent = 'Confirm Booking'; btn.disabled = false;
+    }
+  }
 </script>
+
+<!-- Book Modal -->
+<div id="bookModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(5px);">
+  <div style="background:#fff; border-radius:20px; padding:30px; width:100%; max-width:400px; position:relative; box-shadow:0 20px 40px rgba(0,0,0,0.2);">
+    <button onclick="closeBookModal()" style="position:absolute; top:20px; right:20px; background:none; border:none; font-size:24px; cursor:pointer; color:#64748b;">×</button>
+    <div style="font-size:32px; margin-bottom:10px;">📅</div>
+    <h2 style="font-family:'Outfit'; font-size:24px; font-weight:700; color:#0f172a; margin-bottom:5px;">Book Appointment</h2>
+    <p style="font-size:13px; color:#64748b; margin-bottom:20px;">Book a direct visit without AI triage.</p>
+    
+    <div style="margin-bottom:15px;">
+      <label style="display:block; font-size:13px; font-weight:600; margin-bottom:5px; color:#334155;">Full Name *</label>
+      <input type="text" id="bookName" style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:10px; outline:none;" placeholder="John Doe">
+    </div>
+    <div style="margin-bottom:15px;">
+      <label style="display:block; font-size:13px; font-weight:600; margin-bottom:5px; color:#334155;">Phone Number *</label>
+      <input type="tel" id="bookPhone" style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:10px; outline:none;" placeholder="10-digit number">
+    </div>
+    <div style="margin-bottom:15px;">
+      <label style="display:block; font-size:13px; font-weight:600; margin-bottom:5px; color:#334155;">Date *</label>
+      <input type="date" id="bookDate" style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:10px; outline:none;">
+    </div>
+    <div style="margin-bottom:20px;">
+      <label style="display:block; font-size:13px; font-weight:600; margin-bottom:5px; color:#334155;">Reason for Visit</label>
+      <input type="text" id="bookReason" style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:10px; outline:none;" placeholder="E.g. Fever, Checkup">
+    </div>
+    
+    <div id="bookErr" style="display:none; color:#ef4444; font-size:13px; margin-bottom:10px; font-weight:500;"></div>
+    <div id="bookOk" style="display:none; color:#10b981; font-size:13px; margin-bottom:10px; font-weight:500;"></div>
+    
+    <button id="bookBtn" onclick="submitBooking()" style="width:100%; padding:14px; background:#4f46e5; color:#fff; border:none; border-radius:10px; font-weight:700; font-family:'Outfit'; font-size:15px; cursor:pointer; transition:0.2s;">Confirm Booking</button>
+  </div>
+</div>
 </body>
 </html>

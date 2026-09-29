@@ -24,6 +24,28 @@
         radial-gradient(ellipse 50% 30% at 80% 80%, rgba(139,92,246,0.06) 0%, transparent 60%);
     }
 
+    #adminLoginOverlay {
+      position: fixed; inset: 0; background: var(--bg); z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column;
+    }
+    .admin-login-box {
+      background: var(--surface); border: 1px solid var(--border);
+      padding: 40px; border-radius: 20px; text-align: center;
+      max-width: 400px; width: 90%; backdrop-filter: blur(20px);
+    }
+    .admin-login-box input {
+      width: 100%; padding: 14px; margin-bottom: 15px;
+      background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+      color: white; border-radius: 10px; outline: none; font-family: 'Inter';
+    }
+    .admin-login-box button {
+      width: 100%; padding: 14px; background: #6366f1; color: white;
+      border: none; border-radius: 10px; cursor: pointer; font-weight: 600;
+      font-family: 'Outfit'; font-size: 16px; transition: 0.2s;
+    }
+    .admin-login-box button:hover { background: #4f46e5; }
+
     nav {
       position: sticky; top: 0; z-index: 100;
       display: flex; align-items: center; gap: 20px;
@@ -154,6 +176,17 @@
   <link rel="stylesheet" href="/enhance.css" />
 </head>
 <body>
+<!-- Admin Login Overlay -->
+<div id="adminLoginOverlay" style="display: none;">
+  <div class="admin-login-box">
+    <div class="logo-icon" style="margin: 0 auto 15px;">🏥</div>
+    <h2 style="margin-bottom: 25px; font-family: 'Outfit'; font-size: 24px;">Admin Access</h2>
+    <input type="text" id="adminId" placeholder="Admin ID" />
+    <input type="password" id="adminPass" placeholder="Password" />
+    <button onclick="doAdminLogin()">Sign In to Dashboard</button>
+    <div id="adminErr" style="color: #ef4444; margin-top: 15px; display: none; font-size: 14px;">Invalid credentials.</div>
+  </div>
+</div>
 <!-- TriageAID Enhancement Scripts -->
 <div id="scrollProgress"></div>
 <script>
@@ -309,6 +342,7 @@
       <button class="filter-btn" id="filterUrgent" onclick="setFilter('URGENT')">🟠 Urgent</button>
       <button class="filter-btn" id="filterRoutine" onclick="setFilter('ROUTINE')">🟢 Routine</button>
       <button class="refresh-btn" onclick="loadData()">↻ Refresh</button>
+      <button class="refresh-btn" onclick="exportToExcel()" style="border-color: #10b981; background: rgba(16,185,129,0.1); color: #34d399; margin-left: auto;">📥 Export to CSV</button>
     </div>
 
     <!-- Table -->
@@ -334,23 +368,34 @@
   </main>
 
   <script>
-    /* Supabase Auth Guard */
-    let _sbAdmin = null;
-    (async function(){
-      try {
-        const res = await fetch('/api/auth/config');
-        const cfg = await res.json();
-        _sbAdmin = window.supabase.createClient(cfg.supabase_url, cfg.supabase_anon_key);
-        const { data: { session } } = await _sbAdmin.auth.getSession();
-        if (!session) { window.location.href = '/doctor-login'; }
-      } catch(e) { window.location.href = '/doctor-login'; }
-    })();
-
-    async function logoutAdmin() {
-      if (_sbAdmin) await _sbAdmin.auth.signOut();
-      sessionStorage.clear();
-      window.location.href = '/doctor-login';
+    /* Super Admin Auth Guard */
+    function checkAuth() {
+      const isAuth = sessionStorage.getItem('super_admin_jinendra') === 'true';
+      if (!isAuth) {
+        document.getElementById('adminLoginOverlay').style.display = 'flex';
+      } else {
+        document.getElementById('adminLoginOverlay').style.display = 'none';
+        loadData();
+      }
     }
+
+    function doAdminLogin() {
+      const id = document.getElementById('adminId').value;
+      const pass = document.getElementById('adminPass').value;
+      if (id === 'jinendra' && pass === 'Jinendra@2006') {
+        sessionStorage.setItem('super_admin_jinendra', 'true');
+        document.getElementById('adminLoginOverlay').style.display = 'none';
+        loadData();
+      } else {
+        document.getElementById('adminErr').style.display = 'block';
+      }
+    }
+
+    function logoutAdmin() {
+      sessionStorage.removeItem('super_admin_jinendra');
+      window.location.reload();
+    }
+
 
     let allRows = [];
     let currentFilter = 'all';
@@ -444,7 +489,31 @@
       }).join('');
     }
 
-    loadData();
+    function exportToExcel() {
+      if (!allRows || allRows.length === 0) return;
+      
+      const headers = ['Ticket No.', 'Date', 'Time', 'Patient Name', 'Age', 'Gender', 'Phone', 'Symptoms', 'Duration', 'Pain Scale', 'Consciousness', 'Triage Level', 'AI Reasoning'];
+      let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n";
+      
+      allRows.forEach(r => {
+        const row = [
+          r['Ticket No.'], r['Date'], r['Time'], r['Patient Name'], r['Age'], r['Gender'], r['Phone'], 
+          `"${(r['Symptoms'] || '').replace(/"/g, '""')}"`, r['Duration'], r['Pain Scale'], r['Consciousness'],
+          r['Triage Level'], `"${(r['AI Reasoning'] || '').replace(/"/g, '""')}"`
+        ];
+        csvContent += row.join(",") + "\n";
+      });
+      
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `triage_export_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    checkAuth();
     // Auto-refresh every 30s
     setInterval(loadData, 30000);
   </script>

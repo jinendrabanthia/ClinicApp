@@ -376,6 +376,10 @@
       <span>📜 Patient History &amp; Prescriptions Archive</span>
       <span id="badgeArchiveCount" style="background:var(--slate-200);color:var(--slate-700);padding:2px 9px;border-radius:10px;font-size:12px;">0</span>
     </button>
+    <button id="viewTabAi" onclick="switchMainView('ai')" style="padding:11px 22px;border:none;border-radius:12px;font-family:'Poppins',sans-serif;font-size:14px;font-weight:700;cursor:pointer;background:var(--slate-100);color:var(--slate-600);display:flex;align-items:center;gap:8px;transition:all .2s;">
+      <span>🤖 AI Triage Insights</span>
+      <span id="badgeAiCount" style="background:var(--slate-200);color:var(--slate-700);padding:2px 9px;border-radius:10px;font-size:12px;">0</span>
+    </button>
   </div>
 
   <!-- TODAY'S QUEUE VIEW -->
@@ -396,6 +400,7 @@
         <span id="lastUpdated" style="font-size:12px;color:#94a3b8;">—</span>
       </div>
       <button class="refresh-btn" onclick="loadData()">↻ Refresh Now</button>
+      <button class="refresh-btn" onclick="exportToExcel()" style="border-color: #10b981; background: rgba(16,185,129,0.1); color: #059669; margin-left: auto;">📥 Export to CSV</button>
     </div>
 
     <!-- 4-column queues -->
@@ -459,6 +464,33 @@
           </thead>
           <tbody id="archiveTbody">
             <!-- populated by JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI TRIAGE VIEW -->
+  <div id="aiView" style="display:none;">
+    <div style="background:var(--white);border-radius:18px;padding:24px;box-shadow:var(--sha);border:1px solid var(--slate-200);margin-bottom:24px;">
+      <div style="margin-bottom:20px;">
+        <h2 style="font-family:'Poppins',sans-serif;font-size:20px;font-weight:700;color:var(--slate-900);">🤖 AI Triage Insights</h2>
+        <p style="font-size:13px;color:var(--slate-500);margin-top:2px;">Detailed insights and differential diagnoses for patients who completed the full AI triage evaluation.</p>
+      </div>
+      
+      <div style="overflow-x:auto;border-radius:14px;border:1px solid var(--slate-200);">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead style="background:var(--slate-800);color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.6px;">
+            <tr>
+              <th style="padding:14px 16px;text-align:left;">Ticket #</th>
+              <th style="padding:14px 16px;text-align:left;">Date &amp; Time</th>
+              <th style="padding:14px 16px;text-align:left;">Patient Name</th>
+              <th style="padding:14px 16px;text-align:left;width:35%;">AI Reasoning &amp; Symptoms</th>
+              <th style="padding:14px 16px;text-align:left;">Triage Level</th>
+              <th style="padding:14px 16px;text-align:center;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="aiTbody">
           </tbody>
         </table>
       </div>
@@ -586,6 +618,19 @@
 
   async function initAuth() {
     try {
+      // Admin fallback
+      const stored = sessionStorage.getItem('loggedDoctor');
+      if (stored) {
+        const d = JSON.parse(stored);
+        if (d && d.id === 'admin') {
+          doc = d;
+          document.getElementById('docNm').textContent = d.name;
+          document.getElementById('docSp').textContent = 'Chief Medical Officer';
+          document.getElementById('docAv').textContent = 'AD';
+          return;
+        }
+      }
+
       const res = await fetch('/api/auth/config');
       const cfg = await res.json();
       _sbClient = window.supabase.createClient(cfg.supabase_url, cfg.supabase_anon_key);
@@ -650,27 +695,26 @@
 
   function switchMainView(view){
     activeMainView = view;
-    const tabToday = document.getElementById('viewTabToday');
-    const tabArchive = document.getElementById('viewTabArchive');
-    const viewToday = document.getElementById('todayView');
-    const viewArchive = document.getElementById('archiveView');
+    const tabs = ['Today', 'Archive', 'Ai'];
+    const views = ['today', 'archive', 'ai'];
+    
+    tabs.forEach((t, i) => {
+      const tabEl = document.getElementById('viewTab' + t);
+      const viewEl = document.getElementById(views[i] + 'View');
+      
+      if(views[i] === view){
+        viewEl.style.display = 'block';
+        tabEl.style.background = 'var(--cyan-600)';
+        tabEl.style.color = '#fff';
+      } else {
+        viewEl.style.display = 'none';
+        tabEl.style.background = 'var(--slate-100)';
+        tabEl.style.color = 'var(--slate-600)';
+      }
+    });
 
-    if(view === 'today'){
-      viewToday.style.display = 'block';
-      viewArchive.style.display = 'none';
-      tabToday.style.background = 'var(--cyan-600)';
-      tabToday.style.color = '#fff';
-      tabArchive.style.background = 'var(--slate-100)';
-      tabArchive.style.color = 'var(--slate-600)';
-    } else {
-      viewToday.style.display = 'none';
-      viewArchive.style.display = 'block';
-      tabArchive.style.background = 'var(--cyan-600)';
-      tabArchive.style.color = '#fff';
-      tabToday.style.background = 'var(--slate-100)';
-      tabToday.style.color = 'var(--slate-600)';
-      renderArchiveView();
-    }
+    if(view === 'archive') renderArchiveView();
+    if(view === 'ai') renderAiView();
   }
 
   /* ── Data Loading & Sync ── */
@@ -701,11 +745,14 @@
       const todayCompleted = completedPatients.filter(p => isToday(p.completedAt || p['Date']));
 
       // Update Top Nav Badges
+      const aiTriaged = rawHistory.filter(p => p['AI Reasoning'] && !p['AI Reasoning'].startsWith('Direct Booking'));
       document.getElementById('badgeTodayCount').textContent = allPatients.length + todayCompleted.length;
       document.getElementById('badgeArchiveCount').textContent = rawHistory.length;
+      document.getElementById('badgeAiCount').textContent = aiTriaged.length;
 
       renderQueues();
       if(activeMainView === 'archive') renderArchiveView();
+      if(activeMainView === 'ai') renderAiView();
       document.getElementById('lastUpdated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
     } catch(e){
       console.error(e);
@@ -841,6 +888,49 @@
         <td style="padding:14px 16px;">${medsBadge}</td>
         <td style="padding:14px 16px;text-align:center;">
           <button onclick="openArchivePatientModal('${ticket}')" style="padding:7px 14px;background:linear-gradient(135deg,var(--cyan-600),var(--indigo-600));color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">👁️ View File &amp; Rx</button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderAiView(){
+    const tbody = document.getElementById('aiTbody');
+    if(!tbody) return;
+
+    // Filter patients who were triaged by AI (not directly booked)
+    let filtered = rawHistory.filter(p => p['AI Reasoning'] && !p['AI Reasoning'].startsWith('Direct Booking'));
+
+    if(!filtered.length){
+      tbody.innerHTML = `<tr><td colspan="6" style="padding:40px;text-align:center;color:var(--slate-400);">
+        <div style="font-size:32px;margin-bottom:8px;">🤖</div>
+        <div style="font-weight:600;font-size:15px;color:var(--slate-700);">No AI Triaged patients found</div>
+      </td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(p => {
+      const ticket = p['Ticket No.'] || '—';
+      const level = p['Triage Level'] || 'ROUTINE';
+      const levelColor = level === 'CRITICAL' ? 'background:var(--red-100);color:var(--red-700);'
+        : level === 'URGENT' ? 'background:var(--orange-100);color:var(--orange-700);'
+        : 'background:var(--green-100);color:var(--green-700);';
+
+      return `<tr style="border-bottom:1px solid var(--slate-100);transition:background .15s;" onmouseover="this.style.background='var(--slate-50)'" onmouseout="this.style.background='transparent'">
+        <td style="padding:14px 16px;font-family:'Poppins',sans-serif;font-weight:700;color:var(--cyan-700);">${ticket}</td>
+        <td style="padding:14px 16px;color:var(--slate-500);font-size:12px;">${p['Date']||''}<br/><span style="color:var(--slate-400);">${p['Time']||''}</span></td>
+        <td style="padding:14px 16px;">
+          <div style="font-weight:700;color:var(--slate-900);">${p['Patient Name']||'—'}</div>
+          <div style="font-size:12px;color:var(--slate-500);">👤 ${p['Age']||'?'}y ${p['Gender']||''} · 📞 ${p['Phone']||'N/A'}</div>
+        </td>
+        <td style="padding:14px 16px;color:var(--slate-700);">
+          <strong style="color:var(--slate-900);">AI Reasoning:</strong><br/>
+          ${p['AI Reasoning']||'—'}<br/><br/>
+          <strong style="color:var(--slate-900);">Patient Symptoms:</strong><br/>
+          ${p['Chief Complaint']||'—'}
+        </td>
+        <td style="padding:14px 16px;"><span style="padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;${levelColor}">${level}</span></td>
+        <td style="padding:14px 16px;text-align:center;">
+          <button onclick="openArchivePatientModal('${ticket}')" style="padding:7px 14px;background:linear-gradient(135deg,var(--cyan-600),var(--indigo-600));color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">👁️ View File</button>
         </td>
       </tr>`;
     }).join('');
@@ -1121,6 +1211,33 @@
     t.style.cssText='position:fixed;bottom:24px;right:24px;z-index:9999;background:#16a34a;color:#fff;padding:14px 22px;border-radius:12px;font-weight:600;font-size:13px;box-shadow:0 8px 24px rgba(22,163,74,.4);';
     t.textContent=msg; document.body.appendChild(t);
     setTimeout(()=>t.remove(), 3500);
+  }
+
+  function exportToExcel() {
+    if (!allPatients || allPatients.length === 0) {
+      toast('⚠️ No patients to export.');
+      return;
+    }
+    
+    const headers = ['Ticket No.', 'Date', 'Time', 'Patient Name', 'Age', 'Gender', 'Phone', 'Symptoms', 'Duration', 'Pain Scale', 'Consciousness', 'Triage Level', 'AI Reasoning'];
+    let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n";
+    
+    allPatients.forEach(r => {
+      const row = [
+        r['Ticket No.'], r['Date'], r['Time'], r['Name'], r['Age'], r['Gender'], r['Phone'], 
+        `"${(r['Symptoms'] || '').replace(/"/g, '""')}"`, r['Duration'], r['Pain Scale'], r['Consciousness'],
+        r['Triage Level'], `"${(r['AI Reasoning'] || '').replace(/"/g, '""')}"`
+      ];
+      csvContent += row.join(",") + "\n";
+    });
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `todays_queue_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 
   loadData();

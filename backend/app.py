@@ -153,21 +153,51 @@ def api_triage():
         level = result["level"]
         actions = {}
 
+        log = add_to_waiting_list(patient_data, result)
+        actions["waiting_list"] = log
+        actions["ticket_number"] = log.get("ticket_number")
+
         if level in ("CRITICAL", "URGENT"):
             alert = send_critical_alert(patient_data, result)
             actions["doctor_alert"] = alert
-            actions["ticket_number"] = None
 
-        if level in ("ROUTINE", "URGENT"):
-            log = add_to_waiting_list(patient_data, result)
-            actions["waiting_list"] = log
-            actions["ticket_number"] = log.get("ticket_number")
-            if patient_data.get("email"):
-                conf = send_routine_confirmation(patient_data, log.get("ticket_number", ""), result)
-                actions["patient_confirmation"] = conf
+        if patient_data.get("email") and level in ("ROUTINE", "URGENT"):
+            conf = send_routine_confirmation(patient_data, log.get("ticket_number", ""), result)
+            actions["patient_confirmation"] = conf
 
         return jsonify({"success": True, "triage": result, "actions": actions, "patient_data": patient_data})
 
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ─── Direct Booking API ──────────────────────────────────────
+
+@app.route("/api/book", methods=["POST"])
+def api_book():
+    """POST /api/book — Direct appointment booking."""
+    try:
+        data = request.get_json()
+        if not data or not data.get("name") or not data.get("phone"):
+            return jsonify({"error": "Missing required fields"}), 400
+        
+        # Simulate patient data and result for the waiting list
+        patient_data = {
+            "name": data["name"],
+            "phone": data["phone"],
+            "age": "N/A",
+            "gender": "N/A",
+            "symptoms": data.get("reason", "Direct Booking"),
+            "pain_scale": 0
+        }
+        result = {
+            "level": "ROUTINE",
+            "reasoning": f"Direct Booking scheduled for {data.get('date', 'Unknown Date')}"
+        }
+        
+        log = add_to_waiting_list(patient_data, result)
+        
+        return jsonify({"success": True, "ticket": log.get("ticket_number")})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

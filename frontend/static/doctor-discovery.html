@@ -12,6 +12,12 @@
   <script>
     (async function(){
       try {
+        const stored = sessionStorage.getItem('loggedDoctor');
+        if (stored) {
+          const d = JSON.parse(stored);
+          if (d && d.id === 'admin') return;
+        }
+        
         const res = await fetch('/api/auth/config');
         const cfg = await res.json();
         const sb = window.supabase.createClient(cfg.supabase_url, cfg.supabase_anon_key);
